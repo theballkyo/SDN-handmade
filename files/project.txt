@@ -1,0 +1,7 @@
+.1.3.6.1.2.1.4.24.
+
+https://www.cisco.com/c/en/us/support/docs/ip/simple-network-management-protocol-snmp/8141-calculate-bandwidth-snmp.html
+
+http://www.mibdepot.com/xsearch_index3.html?id=172358
+
+https://serverfault.com/questions/535875/how-to-monitor-per-port-bandwidth-using-snmp
