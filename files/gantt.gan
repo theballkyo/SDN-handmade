@@ -1,10 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?><project name="Project" company="" webLink="http://" view-date="2017-10-08" view-index="0" gantt-divider-location="520" resource-divider-location="300" version="2.8.5" locale="en_US">
+<?xml version="1.0" encoding="UTF-8"?><project name="Project" company="" webLink="http://" view-date="2017-08-20" view-index="0" gantt-divider-location="520" resource-divider-location="300" version="2.8.5" locale="en_US">
     <description/>
     <view zooming-state="default:4" id="gantt-chart">
-        <field id="tpd3" name="Name" width="331" order="0"/>
-        <field id="tpd4" name="Begin date" width="92" order="1"/>
+        <field id="tpd3" name="Name" width="328" order="0"/>
+        <field id="tpd4" name="Begin date" width="95" order="1"/>
         <field id="tpd5" name="End date" width="94" order="2"/>
-        <option id="color.recent"><![CDATA[#6666ff #00ff00 #ff0000]]></option>
+        <option id="color.recent"><![CDATA[#00ffff #ffff00 #6666ff #00ff00 #ff0000]]></option>
     </view>
     <view id="resource-table">
         <field id="0" name="Name" width="210" order="0"/>
@@ -55,18 +55,25 @@
                 <depend id="30" type="2" difference="0" hardness="Strong"/>
                 <depend id="36" type="2" difference="0" hardness="Rubber"/>
             </task>
-            <task id="30" name="พัฒนาระบบ ดึงข้อมูล" color="#8cb6ce" meeting="false" start="2017-09-11" duration="10" complete="0" expand="true">
+            <task id="30" name="พัฒนาระบบ ดึงข้อมูลและจัดเก็บ" color="#8cb6ce" meeting="false" start="2017-09-11" duration="10" complete="0" expand="true">
                 <depend id="44" type="2" difference="0" hardness="Rubber"/>
+                <task id="58" name="ข้อมูล routing" color="#8cb6ce" meeting="false" start="2017-09-11" duration="3" complete="0" expand="true"/>
+                <task id="60" name="ข้อมูล interface &amp; bandwidth" color="#8cb6ce" meeting="false" start="2017-09-14" duration="2" complete="0" expand="true"/>
+                <task id="69" name="ข้อมูล Access list &amp; Route-map" color="#8cb6ce" meeting="false" start="2017-09-18" duration="5" complete="0" expand="true"/>
             </task>
-            <task id="36" name="พัฒนาระบบ การส่งข้อมูล" color="#8cb6ce" meeting="false" start="2017-09-25" duration="10" complete="0" expand="true"/>
-            <task id="44" name="พัฒนาระบบแสดงข้อมูลที่ผ่านการ process" color="#8cb6ce" meeting="false" start="2017-10-09" duration="15" complete="0" expand="true">
-                <depend id="48" type="2" difference="0" hardness="Strong"/>
+            <task id="36" name="พัฒนาระบบ การส่งข้อมูล" color="#8cb6ce" meeting="false" start="2017-09-25" duration="5" complete="0" expand="true">
+                <task id="64" name="ส่ง routing (Access list, Route-map)" color="#8cb6ce" meeting="false" start="2017-09-25" duration="5" complete="0" expand="true"/>
             </task>
-            <task id="48" name="ทดสอบระบบ" color="#6666ff" meeting="false" start="2017-10-30" duration="1" complete="0" expand="true">
-                <depend id="39" type="2" difference="0" hardness="Strong"/>
+            <task id="44" name="พัฒนาระบบแสดงข้อมูลที่ผ่านการ process" color="#8cb6ce" meeting="false" start="2017-10-02" duration="20" complete="0" expand="true">
+                <task id="94" name="ข้อมูล interfaces (include bandwidth, % usage)" color="#8cb6ce" meeting="false" start="2017-10-02" duration="5" complete="0" expand="true"/>
+                <task id="98" name="Topology" color="#8cb6ce" meeting="false" start="2017-10-09" duration="5" complete="0" expand="true"/>
+                <task id="77" name="ข้อมูล routing (ที่ยังไม่แก้ไข)" color="#8cb6ce" meeting="false" start="2017-10-16" duration="2" complete="0" expand="true"/>
+                <task id="96" name="ข้อมูล route ที่ถูกแก้ไข" color="#8cb6ce" meeting="false" start="2017-10-18" duration="5" complete="0" expand="true"/>
+                <task id="123" name="reserve" color="#00ffff" meeting="false" start="2017-10-25" duration="3" complete="0" expand="true"/>
             </task>
+            <task id="48" name="ทดสอบระบบ" color="#6666ff" meeting="false" start="2017-10-30" duration="1" complete="0" expand="true"/>
         </task>
-        <task id="39" name="ปิดโปรเจคเฟสแรก" color="#8cb6ce" meeting="false" start="2017-10-31" duration="1" complete="0" expand="true"/>
+        <task id="39" name="ปิดโปรเจคเฟสแรก" color="#ffff00" meeting="false" start="2017-10-31" duration="1" complete="0" expand="true"/>
         <task id="40" name="แก้ไขงาน (เล่ม+ข้อผิดพลาดต่างๆ)" meeting="false" start="2017-11-01" duration="18" complete="0" expand="true"/>
         <task id="51" name="ส่งงาน" color="#ff0000" meeting="false" start="2017-11-01" duration="19" complete="0" priority="4" expand="true"/>
         <task id="55" name="สอบโปรเจค" color="#00ff00" meeting="false" start="2017-12-14" duration="2" complete="0" expand="true"/>
