@@ -8,3 +8,6 @@ https://serverfault.com/questions/535875/how-to-monitor-per-port-bandwidth-using
 
 # IOS Files
 https://mega.nz/#F!nJR3BTjJ!N5wZsncqDkdKyFQLELU1wQ
+
+https://www.cisco.com/c/en/us/td/docs/ios/12_2/qos/configuration/guide/fqos_c/qcfpbr.html
+https://www.youtube.com/watch?v=IhroIrV9_7w
