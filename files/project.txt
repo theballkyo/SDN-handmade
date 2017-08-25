@@ -16,4 +16,4 @@ https://stackoverflow.com/questions/31569339/importerror-no-module-named-cryptog
 
 https://www.cisco.com/en/US/technologies/tk648/tk362/technologies_white_paper09186a00800a3db9.html
 
-struct.unpack("4B", struct.pack("I", 3232266753,))[::-1]
+struct.unpack("4B", struct.pack("!I", 3232266753,))
