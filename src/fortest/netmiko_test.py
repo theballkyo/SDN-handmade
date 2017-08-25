@@ -13,5 +13,5 @@ cisco_881 = {
 net_connect = ConnectHandler(**cisco_881)
 print("Conneced !")
 net_connect.enable()
-output = net_connect.send_command("show ip cache flow")
+output = net_connect.send_command("show run | section ip access-list")
 print(output)
