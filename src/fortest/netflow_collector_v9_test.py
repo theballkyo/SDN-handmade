@@ -107,6 +107,8 @@ field_types = {
     89: 'FORWARDING STATUS',
 }
 
+def convert_to_ip(ip_int):
+    return struct.unpack("4B", struct.pack("!I", ip_int))
 
 class DataRecord:
     """This is a 'flow' as we want it from our source. What it contains is
@@ -156,6 +158,9 @@ class DataFlowSet:
                 fdata = 0
                 for idx, byte in enumerate(reversed(bytearray(dataslice))):
                     fdata += byte << (idx * 8)
+
+                if fkey in ['IPV4_SRC_ADDR', 'IPV4_DST_ADDR', 'IPV4_NEXT_HOP']:
+                    fdata = convert_to_ip(fdata)
 
                 new_record.data[fkey] = fdata
 
@@ -285,12 +290,23 @@ if __name__ == "__main__":
     print("Listening on interface {}:{}".format(HOST, PORT))
 
     while 1:
-        (data, sender) = sock.recvfrom(8192)
-        print("Received data from {}, length {}".format(sender, len(data)))
+        try:
+            (data, sender) = sock.recvfrom(8192)
+            print("Received data from {}, length {}".format(sender, len(data)))
 
-        export = ExportPacket(data, _templates)
-        _templates.update(export.templates)
-        
-        print(export.flows)
-        
-        print("Processed ExportPacket with {} flows.".format(export.header.count))
+            export = ExportPacket(data, _templates)
+            _templates.update(export.templates)
+            print("{:22}{:22}{:5} {}".format("SRC", "DST", "PROTO", "BYTES"))
+            for flow in export.flows:
+                print("{:22}{:22}{:5} {}".format(
+                    ".".join(str(x) for x in flow.data['IPV4_SRC_ADDR']) + ":" + str(flow.data['L4_SRC_PORT']),
+                    ".".join(str(x) for x in flow.data['IPV4_DST_ADDR']) + ":" + str(flow.data['L4_DST_PORT']),
+                    flow.data['PROTOCOL'],
+                    flow.data['IN_BYTES']
+                ))
+            
+            print("Processed ExportPacket with {} flows.".format(export.header.count))
+        except ValueError:
+            pass
+        except KeyError:
+            pass
