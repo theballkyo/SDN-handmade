@@ -39,7 +39,7 @@ class DataFlowSet:
 
             for field in template.fields:
                 flen = field.field_length
-                fkey = field_types[field.field_type]
+                fkey = field_types[field.field_type].lower()
                 fdata = None
 
                 # The length of the value byte slice is defined in the template
