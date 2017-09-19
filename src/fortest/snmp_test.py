@@ -1,18 +1,23 @@
 from pysnmp.hlapi import *
 i = 0
+oid = "1.3.6.1.2.1.2"
+# 1.3.6.1.2.1.4.24
 for (errorIndication,
      errorStatus,
      errorIndex,
      varBinds) in nextCmd(SnmpEngine(),
                           CommunityData('public'),
-                          UdpTransportTarget(('192.168.122.2', 161)),
+                          UdpTransportTarget(('demo.snmplabs.com', 161)),
                           ContextData(),
-                          ObjectType(ObjectIdentity('.1.3.6.1.2.1.4.24'))):
+                          ObjectType(ObjectIdentity(oid))):
 
-    if i > 100:
-      print(type(varBinds[0]))
-      break
-    i += 1
+    # if i % 100 == 0:
+    #   print(varBinds[0][0].getOid())
+    #   break
+    # i += 1
+
+    if not str(varBinds[0][0].getOid()).startswith(oid):
+        break
 
     if errorIndication:
         print(errorIndication)

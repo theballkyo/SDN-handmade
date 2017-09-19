@@ -1,0 +1,70 @@
+{
+    "_id" : ObjectId("59b6450953b81b36c00d5887"),
+    "name" : "R1",
+    "connected" : {
+        "R2": {
+            "up": true,
+            "bw": 2222,
+            "subnet": "1111"
+        },
+        "R3": {
+            "up": true,
+            "bw": 2222
+        },
+        "R4": {
+            "up": false,
+            "bw": 2222
+        }
+    },
+    "routes" : [
+        {
+            "dst" : "111.111.0.0",
+            "dst_mask" : 16,
+            "nexthop" : "10.0.0.1"
+        },
+        {
+            "dst" : "111.111.111.0",
+            "dst_mask" : 24,
+            "nexthop" : "10.0.0.1"
+        }
+    ],
+    "routeMapACl" : [
+        {
+            "name" : "MAP01",
+            "src": "",
+            "dst": ""
+        }
+    ],
+    "routeMap" : [
+        {
+            "name" : "map01",
+            "maps" : [
+                {
+                    "priority" : 10,
+                    "map..." : "...",
+                    "acl" : "MAP01"
+                }
+            ]
+        }  
+    ],
+    "interfaces": [
+        {
+            "name" : "FastEthernet 0/0",
+            "ipv4" : "10.0.0.1",
+            "mask" : 24,
+            "status" : "up",
+            "protocol" : "up",
+            "mapPolicy" : "map01"
+        },
+        {
+            "name" : "FastEthernet 0/1",
+            "ipv4" : "",
+            "mask" : 0,
+            "status" : "down",
+            "protocol" : "down"
+        }
+    ],
+    "informations": {
+        "uptime" : 1111
+    }
+}

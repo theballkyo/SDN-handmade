@@ -1,0 +1,27 @@
+db.getCollection('device').aggregate([
+    {
+        $project: {
+            uptime: 1,
+            routes: {
+                $filter : {
+                    input: "$routes",
+                    as: "route",
+                    cond: { $and: 
+                        [
+                        { $eq: [ "$$route.ipCidrRouteProto", 13 ] },
+//                         { $eq: [ "$$route", null ] },
+//                         { $exists: [ "$$route", true ] }
+//                         { $size: [ "$$route", 1]}
+                       ]
+                   },
+                    
+                }
+            }
+        }
+    },
+    {
+        '$match': {
+            'routes.1': { '$exists': true}
+        }
+    }
+])
