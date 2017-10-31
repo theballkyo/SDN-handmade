@@ -1,9 +1,13 @@
+""" Netflow packet type """
 import struct
 
+
 def convert_to_ip(ip_int):
+    """This docstring
+    """
     return ".".join(str(x) for x in struct.unpack("4B", struct.pack("!I", ip_int)))
 
-field_types = {
+FIELD_TYPES = {
     1: 'IN_BYTES',
     2: 'IN_PKTS',
     3: 'FLOWS',

@@ -1,5 +1,6 @@
 import struct
-from netflow_types import field_types, fields_function, convert_to_ip
+import utils
+from netflow_types import FIELD_TYPES, fields_function, convert_to_ip
 
 class DataRecord:
     """This is a 'flow' as we want it from our source. What it contains is
@@ -21,7 +22,7 @@ class DataFlowSet:
     template. This template is referenced in the field 'flowset_id' of this
     DataFlowSet and must not be zero.
     """
-    def __init__(self, data, templates):
+    def __init__(self, data, templates, timestamp):
         pack = struct.unpack('!HH', data[:4])
 
         self.template_id = pack[0]  # flowset_id is reference to a template_id
@@ -39,7 +40,7 @@ class DataFlowSet:
 
             for field in template.fields:
                 flen = field.field_length
-                fkey = field_types[field.field_type].lower()
+                fkey = FIELD_TYPES[field.field_type].lower()
                 fdata = None
 
                 # The length of the value byte slice is defined in the template
@@ -50,8 +51,15 @@ class DataFlowSet:
                 for idx, byte in enumerate(reversed(bytearray(dataslice))):
                     fdata += byte << (idx * 8)
 
-                if fkey in ['IPV4_SRC_ADDR', 'IPV4_DST_ADDR', 'IPV4_NEXT_HOP']:
+                if field.field_type in (8, 12, 15):
                     fdata = convert_to_ip(fdata)
+
+                if field.field_type in (21, 22):
+                    # print('1111111')
+                    fdata = int(fdata)
+                    fdata = ((timestamp * 1000.0) - fdata) / 1000.0
+                    fdata = utils.unix_to_datetime(fdata)
+                    # print(fdata)
 
                 new_record.data[fkey] = fdata
 
@@ -73,7 +81,7 @@ class TemplateField:
 
     def __repr__(self):
         return "<TemplateField type {}:{}, length {}>".format(
-            self.field_type, field_types[self.field_type], self.field_length)
+            self.field_type, FIELD_TYPES[self.field_type], self.field_length)
 
 
 class TemplateRecord:
@@ -87,7 +95,7 @@ class TemplateRecord:
     def __repr__(self):
         return "<TemplateRecord {} with {} fields: {}>".format(
             self.template_id, self.field_count,
-            ' '.join([field_types[field.field_type] for field in self.fields]))
+            ' '.join([FIELD_TYPES[field.field_type] for field in self.fields]))
 
 
 class TemplateFlowSet:
@@ -151,6 +159,7 @@ class ExportPacket:
     """
     def __init__(self, data, templates):
         self.header = Header(data)
+        # print(self.header.uptime, self.header.timestamp)
         self.templates = templates
         self.flows = []
 
@@ -162,7 +171,7 @@ class ExportPacket:
                 self.templates.update(tfs.templates)
                 offset += tfs.length
             else:
-                dfs = DataFlowSet(data[offset:], self.templates)
+                dfs = DataFlowSet(data[offset:], self.templates, self.header.timestamp)
                 self.flows += dfs.flows
                 offset += dfs.length
 
