@@ -4,6 +4,7 @@ import multiprocessing
 import threading
 import socket
 import logging
+import time
 
 class NetflowWorker(threading.Thread):
 
@@ -11,6 +12,8 @@ class NetflowWorker(threading.Thread):
         threading.Thread.__init__(self)
         self.bind_ip = bind_ip
         self.bind_port = bind_port
+        self.sock = None
+        self.stop_flag = False
 
     def run(self):
         """ Create netflow Server
@@ -20,18 +23,22 @@ class NetflowWorker(threading.Thread):
         # sys.stdout.write('> ' + readline.get_line_buffer())
         # sys.stdout.flush()
         logging.debug("Starting...")
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind((self.bind_ip, self.bind_port))
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # self.sock.settimeout(10)
+        # self.sock.setblocking(0)
+        self.sock.bind((self.bind_ip, self.bind_port))
         logging.debug("Listening on interface {}:{}".format(self.bind_ip, self.bind_port))
         _templates = {}
 
         netflow_db = NetflowDB()
-
         while 1:
+            if self.stop_flag:
+                logging.debug("Netflow server stopped loop")
+                self.sock.close()
+                break
             try:
-                (data, sender) = sock.recvfrom(8192)
+                (data, sender) = self.sock.recvfrom(8192)
                 logging.debug("Received data from {}, length {}".format(sender, len(data)))
-
                 export = ExportPacket(data, _templates)
                 _templates.update(export.templates)
                 logging.debug("{:22}{:22}{:5} {}".format("SRC", "DST", "PROTO", "BYTES"))
@@ -51,8 +58,22 @@ class NetflowWorker(threading.Thread):
                 pass
             except KeyboardInterrupt:
                 break
+            except socket.timeout:
+                continue
+            except Exception as e:
+                logging.debug(e)
 
-    def stop(self):
+    def shutdown(self):
         """ Stop netflow Server
         """
-        pass
+        logging.debug("Shutdown Netflow server...")
+        self.stop_flag = True
+        socket.socket(socket.AF_INET, socket.SOCK_DGRAM).sendto(
+            b'stop', (self.bind_ip, self.bind_port)
+        )
+        # time.sleep(1)
+        # try:
+        #     self.sock.shutdown(socket.SHUT_WR)
+        # except:
+        #     pass
+        # self.sock.close()

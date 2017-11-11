@@ -1,5 +1,5 @@
 import asyncio
-import uvloop
+# import uvloop
 import sys
 import logging
 import utils
@@ -10,6 +10,7 @@ from pysnmp.hlapi.varbinds import *
 from pysnmp.proto.rfc1905 import endOfMibView, EndOfMibView
 from pysnmp.hlapi.asyncio import *
 from pyasn1.type.univ import Null
+import pysnmp.proto.errind as errind
 from snmp_type import IF_TYPE
 
 def to_value(rfc1902_object):
@@ -60,7 +61,9 @@ async def get(host, community, varBinds, max_repetitions=16, port=161, mibs=None
         logging.debug("Usage time {:.3f}".format(recv_time - start_time))
         # print(varBindTable)
         if errorIndication:
-            print(errorIndication)
+            # No SNMP response received before timeout
+            logging.debug(errorIndication)
+            data = None
             break
         elif errorStatus:
             print('%s at %s' % (
@@ -267,8 +270,8 @@ async def get_system_info(host, community, port=161):
         'name'
     ]
     data = await get(host, community, object_types, mibs=mibs)
-    if len(data) == 0:
-        return {}
+    if data is None or len(data) == 0:
+        return None
     data = data[0]
     data['description'] = utils.hex_to_string(data['description'])
     return data
@@ -293,8 +296,8 @@ async def get_cdp(host, community, port=161):
 
     data = await get(host, community, object_types, mibs=mibs)
 
-    if len(data) == 0:
-        return []
+    if data is None or len(data) == 0:
+        return None
 
     for dat in data:
         dat['version'] = utils.hex_to_string(dat['version'])

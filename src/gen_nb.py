@@ -1,48 +1,58 @@
 import copy
 import ipcalc
-
+import logging
 from graphs import Graph
 from database import MongoDB
 
-def run(exclude_ips=None):
+
+class Link:
+    def __init__(self):
+        self.device1_ip = ''
+        self.device1_name = ''
+        self.device2_ip = ''
+        self.device2_name = ''
+
+
+class Neighbor:
+    def __init__(self, interface, neighbor_ip):
+        self.neighbor_ip = neighbor_ip
+        self.interface = interface
+
+
+def create_graph(devices):
     """
     """
-    mongo = MongoDB()
-    device_db = mongo.device
-
-    devices = device_db.find()
-
-    num_device = devices.count()
+    num_device = len(devices)
 
     matrix = []
-
     graph = {}
-
-    # print(num_device)
-    nnn = 0
     for n1 in range(num_device):
+        # Resetting neighbor
+        devices[n1].neighbor = []
+
+        device_1_name = devices[n1].get_name()
         _matrix = {
-            'name': devices[n1]['name'],
+            'name': device_1_name,
             'connected': []
         }
-        graph[devices[n1]['name']] = []
+        graph[devices[n1]] = []
         for n2 in range(num_device):
+            device_2_name = devices[n2].get_name()
             _d2_matrix = {
-                'name': devices[n2]['name'],
+                'name': device_2_name,
                 'connected': False
             }
             if n1 == n2:
                 _d2_matrix['connected'] = True
                 _matrix['connected'].append(_d2_matrix)
                 continue
-            device_1_if = devices[n1]['interfaces']
-            device_2_if = devices[n2]['interfaces']
+            device_1_if = devices[n1].get_interfaces()
+            device_2_if = devices[n2].get_interfaces()
             for n3 in range(len(device_1_if)):
                 stop_flag = False
                 d1_ip = device_1_if[n3].get('ipv4_address')
                 d1_subnet = device_1_if[n3].get('subnet')
                 if not d1_ip:
-                    nnn += 1
                     continue
                 d1_ip_network = ipcalc.Network(d1_ip, d1_subnet)
 
@@ -53,14 +63,22 @@ def run(exclude_ips=None):
                     continue
                 # print(devices[n1]['name'], d1_ip)
                 for n4 in range(len(device_2_if)):
-                    nnn += 1
                     d2_ip = device_2_if[n4].get('ipv4_address')
                     d2_subnet = device_2_if[n4].get('subnet')
                     if not d2_ip:
                         continue
                     # print(d2_ip, d1_ip_network)
                     if d2_ip in d1_ip_network:
-                        graph[devices[n1]['name']].append(devices[n2]['name'])
+                        graph[devices[n1]].append(devices[n2])
+                        # Add neighbor to Device object
+                        neighbor_info = {
+                            "neighbor_ip": d2_ip,
+                            # "neighbor_if_index": n4,
+                            "neighbor_obj": devices[n2],
+                            "ip": d1_ip,
+                            "if_index": n3
+                        }
+                        devices[n1].neighbor.append(neighbor_info)
                         stop_flag = True
                         break
                 if stop_flag:
@@ -68,30 +86,10 @@ def run(exclude_ips=None):
                     break
             _matrix['connected'].append(_d2_matrix)
         matrix.append(_matrix)
-    # print(nnn)
-    # print(matrix)
-    print(' ' * 10, end='')
-    for m in matrix:
-        print("[{:^10}]".format(m['name']), end='')
-    print('')
-    for m in matrix:
-        print("{:10}".format(m['name']), end='')
-        for conn in m['connected']:
-            print("{:^12}".format(conn['connected']), end='')
-        print('')
-    # print(graph)
+    # logging.debug(graph)
     topo_graph = Graph(graph)
-    # print(topo_graph)
-    # print(topo_graph.vertices())
-    # print(topo_graph.edges())
-    # path = topo_graph.find_all_paths("R4", "R1")
-    # print(path)
-    # path = topo_graph.find_path("R4", "R1")
-    # print(path)
+    # print(matrix)
     return topo_graph
 
-def get_neighbor():
-    return run()
-
-if __name__ == '__main__':
-    run(exclude_ips=[('192.168.106.0', '255.255.255.0')])
+# if __name__ == '__main__':
+#     run(exclude_ips=[('192.168.106.0', '255.255.255.0')])

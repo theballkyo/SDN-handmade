@@ -1,30 +1,28 @@
-import copy
+# import copy
 import ipcalc
+import logging
 
 from database import MongoDB
 
 
 class Subnet:
-    def __init__(self):
-        self.devices = []
+    def __init__(self, network):
+        # self.devices = []
+        self.network = None
 
+    def __str__(self):
+        return self.network
 
-def run(exclude_ips=None):
+def create_subnet(devices, exclude_ips=None):
+    """ Create subnet
     """
-    """
-    mongo = MongoDB()
-    device_db = mongo.device
-
-    devices = device_db.find()
-
-    num_device = devices.count()
+    num_device = len(devices)
 
     subnet_dict = {}
-    # print(num_device)
-    nnn = 0
     for n1 in range(num_device):
-        for interface in devices[n1]['interfaces']:
+        for interface in devices[n1].get_interfaces():
             # print(interface)
+            device = devices[n1]
             ip = interface.get('ipv4_address')
             if not ip:
                 continue
@@ -38,31 +36,36 @@ def run(exclude_ips=None):
 
             subnets = subnet_dict.get(network_str)
             subnet_info = {
-                'device': devices[n1]['name'],
+                'device_name': devices[n1].get_name(),
                 'ip': ip
             }
 
             subnets.append(subnet_info)
+
+            device.subnets[network_str] = {
+                'ip': ip
+            }
             # print(network_str, subnets)
-
-    for subnet in subnet_dict:
-        net = subnet_dict[subnet]
-        print("Subnet\t{}".format(subnet))
-        for n in net:
-            print("\tIP: {}\tDevice: {}".format(n['ip'], n['device']))
-
-    # Matrix subnet
-    subnet_matrix = []
-    # print(subnet_dict)
-
-    for src_subnets in subnet_dict:
-        for src_subnet in subnet_dict[src_subnets]:
-            for dst_subnets in subnet_dict:
-                for dst_subnet in subnet_dict[dst_subnets]:
-                    if src_subnet['ip'] == dst_subnet['ip'] and \
-                        src_subnets == dst_subnets:
-                        continue
-                    print(src_subnets, dst_subnets)
+    return subnet_dict
+    # logging.debug(subnet_dict)
+    # for subnet in subnet_dict:
+    #     net = subnet_dict[subnet]
+    #     logging.debug("Subnet\t{}".format(subnet))
+    #     for n in net:
+    #         logging.debug("\tIP: {}\tDevice: {}".format(n['ip'], n['device_name']))
+    #
+    # # Matrix subnet
+    # subnet_matrix = []
+    # # print(subnet_dict)
+    #
+    # for src_subnets in subnet_dict:
+    #     for src_subnet in subnet_dict[src_subnets]:
+    #         for dst_subnets in subnet_dict:
+    #             for dst_subnet in subnet_dict[dst_subnets]:
+    #                 if src_subnet['ip'] == dst_subnet['ip'] and \
+    #                     src_subnets == dst_subnets:
+    #                     continue
+                    # print(src_subnets, dst_subnets)
     # for subnet in subnet_dict:
     #     matrix = {
     #         'subnet': subnet,
@@ -87,4 +90,4 @@ def run(exclude_ips=None):
     # print(subnet_matrix)
 
 if __name__ == '__main__':
-    run(exclude_ips=[('192.168.106.0', '255.255.255.0')])
+    create_subnet(exclude_ips=[('192.168.106.0', '255.255.255.0')])
