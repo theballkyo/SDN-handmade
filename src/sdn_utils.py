@@ -18,7 +18,7 @@ def unix_to_datetime(unix_time):
     #     raise ValueError('Unix time must be integer only.')
     return datetime.datetime.fromtimestamp(unix_time)
 
-def calculate_bw_usage_percent(octets, if_speed, in_time):
+def cal_bw_usage_percent(octets, if_speed, in_time):
     """Calculate bandwidth usage
     """
     return (octets * 8 * 100) / ((in_time) * if_speed)

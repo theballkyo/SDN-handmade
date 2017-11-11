@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed, wait
 
 from pymongo import ReplaceOne
 
-import utils
+import sdn_utils
 from database import MongoDB
 from snmp_async import (get_cdp, get_interfaces, get_ip_addr, get_lldp,
                         get_routes, get_system_info)
@@ -63,8 +63,6 @@ class SNMPWorker(multiprocessing.Process):
         """
         mongo = MongoDB()
 
-        device.status = device.STATUS_SNMP_WORKING
-
         host = device.ip
         community = device.snmp_community
         port = device.snmp_port
@@ -75,7 +73,7 @@ class SNMPWorker(multiprocessing.Process):
             asyncio.ensure_future(get_ip_addr(host, community, port)),
             asyncio.ensure_future(get_interfaces(host, community, port)),
             asyncio.ensure_future(get_cdp(host, community, port)),
-            asyncio.ensure_future(get_lldp(host, community, port)),
+            # asyncio.ensure_future(get_lldp(host, community, port)), # Todo
         )
 
         if all(r is None for r in results):
@@ -89,23 +87,21 @@ class SNMPWorker(multiprocessing.Process):
         # CDP
         cdp = results[4]
         # LLDP
-        lldp = results[5]
+        # lldp = results[5]
 
         # Todo optimize this
-        for if_index, interface in enumerate(interfaces):
-            for ip_index, ip_addr in enumerate(ip_addrs):
-                if interface['index'] == ip_addr['if_index']:
-                    interface['ipv4_address'] = ip_addr['ipv4_address']
-                    interface['subnet'] = ip_addr['subnet']
+        # for if_index, interface in enumerate(interfaces):
+        #     for ip_index, ip_addr in enumerate(ip_addrs):
+        #         if interface['index'] == ip_addr['if_index']:
+        #             interface['ipv4_address'] = ip_addr['ipv4_address']
+        #             interface['subnet'] = ip_addr['subnet']
 
-        # for interface_index in range(len(interfaces)):
-        #     for ip_index in range(len(ip_addr)):
-        #         if interfaces[interface_index]['index'] == ip_addr[ip_index]['if_index']:
-        #             interfaces[interface_index]['ipv4_address'] = ip_addr[ip_index]['ipv4_address']
-        #             interfaces[interface_index]['subnet'] = ip_addr[ip_index]['subnet']
-        #             break
-
-        system_info['interfaces'] = interfaces
+        for if_index in range(len(interfaces)):
+            for ip_index in range(len(ip_addrs)):
+                if interfaces[if_index]['index'] == ip_addrs[ip_index]['if_index']:
+                    interfaces[if_index]['ipv4_address'] = ip_addrs[ip_index]['ipv4_address']
+                    interfaces[if_index]['subnet'] = ip_addrs[ip_index]['subnet']
+                    break
 
         # print(interfaces[0])
         my_device = mongo.db.device.find_one({
@@ -116,15 +112,42 @@ class SNMPWorker(multiprocessing.Process):
             for interface in interfaces:
                 for my_interface in my_device['interfaces']:
                     if interface['description'] == my_interface['description']:
-                        octets = interface['out_octets'] - my_interface['out_octets']
-                        in_time = system_info['uptime'] - my_device['uptime']
-                        # print('Delta time: ' + str(in_time), end='')
-                        # print(' || IF OUT: ' + str(octets), end='')
-                        # print(' || BW Usage {:.10f}%s || {} Bytes'.format(
-                        #     utils.calculate_bw_usage_percent(octets, interface['speed'], in_time),
-                        #     octets
-                        #     ))
+                        # In
+                        in_octets = interface['out_octets'] - my_interface['out_octets']
+                        in_in_time = system_info['uptime'] - my_device['uptime']
+                        bw_in_usage_percent = sdn_utils.cal_bw_usage_percent(
+                            in_octets,
+                            interface['speed'],
+                            in_in_time)
+                        # Out
+                        out_octets = interface['out_octets'] - my_interface['out_octets']
+                        out_in_time = system_info['uptime'] - my_device['uptime']
+                        bw_out_usage_percent = sdn_utils.cal_bw_usage_percent(
+                            out_octets,
+                            interface['speed'],
+                            out_in_time)
+                        
+                        # Add infomation
+                        interface['bw_in_usage_octets'] = in_octets
+                        interface['bw_in_usage_percent'] = bw_in_usage_percent
+
+                        interface['bw_out_usage_octets'] = out_octets
+                        interface['bw_out_usage_percent'] = bw_out_usage_percent
+
+                        interface['bw_usage_update'] = time.time()
+                        
+                        logging.debug(
+                            ' || BW in usage %.3f || %d bytes',
+                            bw_in_usage_percent,
+                            in_octets)
+
+                        logging.debug(
+                            ' || BW out usage %.3f || %d bytes',
+                            bw_out_usage_percent,
+                            out_octets)
                         break
+
+        system_info['interfaces'] = interfaces
 
         # Clear old routes
         mongo.db.route.delete_many({
@@ -132,7 +155,7 @@ class SNMPWorker(multiprocessing.Process):
         })
 
         # Insert net routes
-        inserted = mongo.db.route.insert_many(routes)
+        mongo.db.route.insert_many(routes)
         mongo.device.update_one({
             'ipv4_address': host
         }, {
@@ -158,9 +181,11 @@ class SNMPWorker(multiprocessing.Process):
         while 1:
             logging.debug("Start loop")
             start = time.time()
+            device.status = device.STATUS_SNMP_WORKING
             loop.run_until_complete(
                 self.get_and_store(device)
             )
+            device.status = device.STATUS_ONLINE
             # logging.debug("Process took: {:.2f} seconds".format(time.time() - start))
             sleep_time = self.loop_time - (time.time() - start)
             # logging.debug("Sleep time {:.2f}".format(sleep_time))
