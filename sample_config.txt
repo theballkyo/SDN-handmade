@@ -1,0 +1,56 @@
+config
+
+add device
+cisco_ios
+192.168.106.200
+cisco
+cisco
+cisco
+
+
+
+
+add device
+cisco_ios
+192.168.106.201
+cisco
+cisco
+cisco
+
+
+
+
+
+
+add device
+cisco_ios
+192.168.106.202
+cisco
+cisco
+cisco
+
+
+
+
+add device
+cisco_ios
+192.168.106.203
+cisco
+cisco
+cisco
+
+
+
+
+
+add device
+cisco_ios
+192.168.106.204
+cisco
+cisco
+cisco
+
+
+
+
+
