@@ -25,12 +25,12 @@ class SNMPWorker(multiprocessing.Process):
         self.devices = []
         self.device_running = []
         self.daemon = True
-        self.loop_time = 60
+        self.loop_time = 15
         self.__shutdown = multiprocessing.Queue()
         self.worker_p = []
         # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-    def add_device(self, device, run=False, port=161):
+    def add_device(self, device, run=False):
         """ Add device to worker
         """
         # if device
@@ -47,6 +47,7 @@ class SNMPWorker(multiprocessing.Process):
                 target=self.run_loop,
                 args=(device,)
                 )
+            t_s.daemon = True
             t_s.start()
             self.device_running.append(t_s)
 
@@ -54,7 +55,13 @@ class SNMPWorker(multiprocessing.Process):
         """ Remove device from worker
         """
         try:
-            self.devices = self.devices.remove(device)
+            self.devices.remove(device)
+            for _ in self.device_running:
+                self.__shutdown.put(device.ip)
+            for device_run in self.device_running:
+                if device_run.name == device.ip:
+                    self.device_running.remove(device_run)
+                    break
         except ValueError:
             pass
 
@@ -62,6 +69,9 @@ class SNMPWorker(multiprocessing.Process):
         """ Get snmp infomation and add to database
         """
         mongo = MongoDB()
+
+        # Status = Working...
+        device.set_status(device.STATUS_SNMP_WORKING)
 
         host = device.ip
         community = device.snmp_community
@@ -77,7 +87,7 @@ class SNMPWorker(multiprocessing.Process):
         )
 
         if all(r is None for r in results):
-            logging.debug("SNMP Server for device ip %s is gone down", host)
+            logging.debug("SNMP Worker: Device ip %s is gone down", host)
             return
 
         system_info = results[0]
@@ -90,30 +100,31 @@ class SNMPWorker(multiprocessing.Process):
         # lldp = results[5]
 
         # Todo optimize this
-        # for if_index, interface in enumerate(interfaces):
-        #     for ip_index, ip_addr in enumerate(ip_addrs):
-        #         if interface['index'] == ip_addr['if_index']:
-        #             interface['ipv4_address'] = ip_addr['ipv4_address']
-        #             interface['subnet'] = ip_addr['subnet']
-
-        for if_index in range(len(interfaces)):
-            for ip_index in range(len(ip_addrs)):
-                if interfaces[if_index]['index'] == ip_addrs[ip_index]['if_index']:
-                    interfaces[if_index]['ipv4_address'] = ip_addrs[ip_index]['ipv4_address']
-                    interfaces[if_index]['subnet'] = ip_addrs[ip_index]['subnet']
+        for if_index, interface in enumerate(interfaces):
+            for ip_index, ip_addr in enumerate(ip_addrs):
+                if interface['index'] == ip_addr['if_index']:
+                    interface['ipv4_address'] = ip_addr['ipv4_address']
+                    interface['subnet'] = ip_addr['subnet']
                     break
+
+        # for if_index in range(len(interfaces)):
+        #     for ip_index in range(len(ip_addrs)):
+        #         if interfaces[if_index]['index'] == ip_addrs[ip_index]['if_index']:
+        #             interfaces[if_index]['ipv4_address'] = ip_addrs[ip_index]['ipv4_address']
+        #             interfaces[if_index]['subnet'] = ip_addrs[ip_index]['subnet']
+        #             break
 
         # print(interfaces[0])
         my_device = mongo.db.device.find_one({
             'device_ip': host
         })
 
-        if my_device:
-            for interface in interfaces:
+        if my_device.get('interfaces'):
+            for if_index, interface in enumerate(interfaces):
                 for my_interface in my_device['interfaces']:
                     if interface['description'] == my_interface['description']:
                         # In
-                        in_octets = interface['out_octets'] - my_interface['out_octets']
+                        in_octets = interface['in_octets'] - my_interface['in_octets']
                         in_in_time = system_info['uptime'] - my_device['uptime']
                         bw_in_usage_percent = sdn_utils.cal_bw_usage_percent(
                             in_octets,
@@ -136,15 +147,15 @@ class SNMPWorker(multiprocessing.Process):
 
                         interface['bw_usage_update'] = time.time()
                         
-                        logging.debug(
-                            ' || BW in usage %.3f || %d bytes',
-                            bw_in_usage_percent,
-                            in_octets)
-
-                        logging.debug(
-                            ' || BW out usage %.3f || %d bytes',
-                            bw_out_usage_percent,
-                            out_octets)
+                        # logging.debug(
+                        #     ' || BW in usage %.3f%% || %d bytes',
+                        #     bw_in_usage_percent,
+                        #     in_octets)
+                        #
+                        # logging.debug(
+                        #     ' || BW out usage %.3f%% || %d bytes',
+                        #     bw_out_usage_percent,
+                        #     out_octets)
                         break
 
         system_info['interfaces'] = interfaces
@@ -156,11 +167,16 @@ class SNMPWorker(multiprocessing.Process):
 
         # Insert net routes
         mongo.db.route.insert_many(routes)
+
+        # Update device info
         mongo.device.update_one({
-            'ipv4_address': host
+            'device_ip': host
         }, {
             '$set': system_info
         }, upsert=True)
+
+        # Update device object
+        device.info = system_info
 
         # Insert CDP
         mongo.db.cdp.update_one({
@@ -171,6 +187,8 @@ class SNMPWorker(multiprocessing.Process):
                 'neighbor': cdp
             }
         }, upsert=True)
+        # Online
+        device.set_status(device.STATUS_ONLINE)
 
     def run_loop(self, device):
         """ Run loop
@@ -178,14 +196,16 @@ class SNMPWorker(multiprocessing.Process):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
+        device.fork()
+
         while 1:
-            logging.debug("Start loop")
+            logging.debug("SNMP Worker: Start loop device IP %s", device.ip)
             start = time.time()
-            device.status = device.STATUS_SNMP_WORKING
+
             loop.run_until_complete(
                 self.get_and_store(device)
             )
-            device.status = device.STATUS_ONLINE
+
             # logging.debug("Process took: {:.2f} seconds".format(time.time() - start))
             sleep_time = self.loop_time - (time.time() - start)
             # logging.debug("Sleep time {:.2f}".format(sleep_time))
@@ -194,33 +214,34 @@ class SNMPWorker(multiprocessing.Process):
             try:
                 shutdown_flag = self.__shutdown.get(True, sleep_time)
             except queue.Empty:
-                shutdown_flag = None
-            logging.debug(shutdown_flag)
-            if shutdown_flag:
-                logging.debug("MP Shutdown")
+                shutdown_flag = False
+            # logging.debug(shutdown_flag)
+            if shutdown_flag == True or shutdown_flag == device.ip:
                 break
+        loop.close()
+        logging.debug("SNMP Worker: device IP %s has stopped", device.ip)
 
     def shutdown(self):
         """ shutdown
         """
         # Todo
-        logging.debug("SNMP Worker shutdown...")
+        logging.debug("SNMP Worker: shutdown...")
         for _ in range(len(self.device_running)+2):
             logging.debug("SNMP Worker send shutdown signal")
             self.__shutdown.put(True)
-        time.sleep(1)
+            time.sleep(0.1)
+        time.sleep(2)
         for device_proc in self.device_running:
-            logging.debug("SNMP Worker wait for process end...")
+            logging.debug("SNMP Worker: wait for process end...")
             logging.debug(device_proc)
-            device_proc.join()
-        logging.debug("SNMP Worker shutdown complete")
+            device_proc.join(30)
+        logging.debug("SNMP Worker: shutdown complete")
 
     def run(self):
         for device in self.devices:
-            t_s = multiprocessing.Process(name=device['host'],
+            t_s = multiprocessing.Process(name=device.ip,
                                           target=self.run_loop,
-                                          args=(device['host'],
-                                                device['community'],
-                                                device['port']))
+                                          args=(device,))
+            t_s.daemon = True
             t_s.start()
             self.device_running.append(t_s)

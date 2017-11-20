@@ -1,5 +1,6 @@
 import pprint
 import logging
+import logging.handlers
 import struct
 import readline
 from datetime import datetime
@@ -24,15 +25,24 @@ class LogBug:
     def __init__(self, queue):
         self.queue = queue
         self.prompt = ''
+        self.is_wait_input = False
+        self.shutdown = False
         # self.sys = sys
 
     def pre_shutdown(self):
         self.prompt = ""
 
+    def post_shutdown(self):
+        self.shutdown = True
+        self.queue.put(None)
+
     def read_input(self, prompt=None):
         if prompt is not None:
             self.prompt = prompt
-        return input(self.prompt)
+        self.is_wait_input = True
+        data = input(self.prompt)
+        self.is_wait_input = False
+        return data
 
     def worker_config(self):
         h = logging.handlers.QueueHandler(self.queue)
@@ -60,14 +70,16 @@ class LogBug:
                 text_len += len(self.prompt)
                 #
                 # ANSI escape sequences (All VT100 except ESC[0G)
-                sys.stdout.write('\x1b[2K')                         # Clear current line
+                sys.stdout.write('\x1b[2K')                          # Clear current line
                 sys.stdout.write('\x1b[1A\x1b[2K'*(text_len//cols))  # Move cursor up and clear line
-                sys.stdout.write('\x1b[0G')                         # Move to start of line
+                sys.stdout.write('\x1b[0G')                          # Move to start of line
                 # print(record.__dict__)
 
-                if record is None: # We send this as a sentinel to tell the listener to quit.
-                    print("LogBug -> shutdown listener thread")
-                    break
+                if record is None:
+                    if self.shutdown: # We send this as a sentinel to tell the listener to quit.
+                        print("LogBug -> shutdown listener thread")
+                        break
+                    continue
                 data = {
                     'created': datetime.fromtimestamp(record.created),
                     'levelname': record.levelname,
@@ -75,6 +87,7 @@ class LogBug:
                 }
                 print("{created} [{levelname}] {message}".format(**data))
                 # sys.stdout.write(record)
+                # if self.is_wait_input:
                 sys.stdout.write(self.prompt + buff)
                 sys.stdout.flush()
                 # # logger.handle(record) # No level or filter logic applied - just do it!

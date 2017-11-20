@@ -91,5 +91,34 @@ def create_graph(devices):
     # print(matrix)
     return topo_graph
 
+def print_matrix(devices, use_cdp=False):
+    """
+    Print matrix
+    :param devices:
+    :return string:
+    """
+    # Todo matrix
+    graph = create_graph(devices)
+    edges = graph.edges()
+    # print(edges)
+    # logging.debug(graph.edges())
+    width = 0
+    for device in devices:
+        if len(device.get_name()) > width:
+            width = len(device.get_name())
+    width += 2
+    print('{:{width}s}'.format('', width=width), end='')
+    for device in devices:
+        print("{:^{width}s}".format(device.get_name(), width=width), end='')
+    print('')
+    for device_row in devices:
+        print('{:{width}s}'.format(device_row.get_name(), width=width), end='')
+        for device_col in devices:
+            if {device_row, device_col} in edges or device_col == device_row:
+                print('{:^{width}s}'.format(str(1), width=width), end='')
+            else:
+                print('{:^{width}s}'.format(str(0), width=width), end='')
+        print()
+
 # if __name__ == '__main__':
 #     run(exclude_ips=[('192.168.106.0', '255.255.255.0')])

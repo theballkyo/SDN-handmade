@@ -1,0 +1,32 @@
+add flow 192.168.1.2/32 0.0.0.0/0
+
+add flow 192.168.1.0/24 8.8.8.8/32
+
+add flow 192.168.1.0/24 8.8.8.8
+
+add flow any 8.8.8.8
+
+add flow 0.0.0.0/0 8.8.8.8
+
+add flow 192.168.1.100 
+
+add flow 192.168.1.0 0.0.0.255 8.8.8.8 255.255.255.255 80-8888
+
+add flow 192.168.1.0/24 103.253.72.9 80
+
+add flow 10.1.1.0/32 22 111.111.111.0/24 8000
+
+add flow any any
+
+
+flow <name>
+ 
+.... match src_ip { host 192.168.1.1 | host 192.168.1.1 port 80 | host 192.168.1.1 port-range 80-8000 | 192.168.1.0 0.0.0.255 | any | any port 80 | any port-rage 80-8000 }
+// .... match src_port {80, 80-8888 | any}
+.... match dst_ip
+.... match ...
+.... set action <device_ip> exit-if-index ..., next-hop 11.11.11.11 || Create ACL, And Route map
+.... set action r2 next-hop 22.22.22.22
+.... set action r3 drop
+
+.... apply

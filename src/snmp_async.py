@@ -2,7 +2,7 @@ import asyncio
 # import uvloop
 import sys
 import logging
-import utils
+import sdn_utils
 import random
 import time
 
@@ -57,8 +57,8 @@ async def get(host, community, varBinds, max_repetitions=16, port=161, mibs=None
             lexicographicMode=False)
 
         # Received packet time
-        recv_time = time.time()
-        logging.debug("Usage time {:.3f}".format(recv_time - start_time))
+        # recv_time = time.time()
+        # logging.debug("Usage time {:.3f}".format(recv_time - start_time))
         # print(varBindTable)
         if errorIndication:
             # No SNMP response received before timeout
@@ -273,7 +273,7 @@ async def get_system_info(host, community, port=161):
     if data is None or len(data) == 0:
         return None
     data = data[0]
-    data['description'] = utils.hex_to_string(data['description'])
+    data['description'] = sdn_utils.hex_to_string(data['description'])
     return data
 
 async def get_cdp(host, community, port=161):
@@ -300,8 +300,8 @@ async def get_cdp(host, community, port=161):
         return None
 
     for dat in data:
-        dat['version'] = utils.hex_to_string(dat['version'])
-        dat['ip_addr'] = utils.hex_to_ip(dat['ip_addr'])
+        dat['version'] = sdn_utils.hex_to_string(dat['version'])
+        dat['ip_addr'] = sdn_utils.hex_to_ip(dat['ip_addr'])
 
     return data
 
@@ -356,7 +356,7 @@ async def get_lldp(host, community, port=161):
     #     return []
     #
     # for dat in data:
-    #     dat['version'] = utils.hex_to_string(dat['version'])
+    #     dat['version'] = sdn_utils.hex_to_string(dat['version'])
     #     dat['ip_addr'] = utils.hex_to_ip(dat['ip_addr'])
 
     return data

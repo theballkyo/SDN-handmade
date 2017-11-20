@@ -127,7 +127,7 @@ class SNMPWorker(multiprocessing.Process):
                             interface['speed'],
                             out_in_time)
                         
-                        # Add infomation
+                        # Add information
                         interface['bw_in_usage_octets'] = in_octets
                         interface['bw_in_usage_percent'] = bw_in_usage_percent
 

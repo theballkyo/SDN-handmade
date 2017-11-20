@@ -1,10 +1,12 @@
-from netflow_packet import ExportPacket
-from database import NetflowDB
-import multiprocessing
-import threading
-import socket
 import logging
+import multiprocessing
+import socket
+import threading
 import time
+
+from database import NetflowDB
+from netflow_packet import ExportPacket
+
 
 class NetflowWorker(threading.Thread):
 
@@ -14,6 +16,8 @@ class NetflowWorker(threading.Thread):
         self.bind_port = bind_port
         self.sock = None
         self.stop_flag = False
+        self.device = []
+        self.daemon = True
 
     def run(self):
         """ Create netflow Server
@@ -33,7 +37,6 @@ class NetflowWorker(threading.Thread):
         netflow_db = NetflowDB()
         while 1:
             if self.stop_flag:
-                logging.debug("Netflow server stopped loop")
                 self.sock.close()
                 break
             try:
@@ -63,6 +66,8 @@ class NetflowWorker(threading.Thread):
             except Exception as e:
                 logging.debug(e)
 
+        logging.debug("Netflow server stopped loop")
+
     def shutdown(self):
         """ Stop netflow Server
         """
@@ -77,3 +82,8 @@ class NetflowWorker(threading.Thread):
         # except:
         #     pass
         # self.sock.close()
+
+    def add_device(self, device):
+        """ Add device for tell netflow than deivce is exist in topology
+        """
+        self.device.append(device)

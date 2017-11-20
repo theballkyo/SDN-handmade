@@ -1,5 +1,5 @@
 import struct
-import utils
+import sdn_utils
 from netflow_types import FIELD_TYPES, fields_function, convert_to_ip
 
 class DataRecord:
@@ -58,7 +58,7 @@ class DataFlowSet:
                     # print('1111111')
                     fdata = int(fdata)
                     fdata = ((timestamp * 1000.0) - fdata) / 1000.0
-                    fdata = utils.unix_to_datetime(fdata)
+                    fdata = sdn_utils.unix_to_datetime(fdata)
                     # print(fdata)
 
                 new_record.data[fkey] = fdata
