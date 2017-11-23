@@ -1,10 +1,11 @@
 import logging
 import multiprocessing
 import socket
+import socketserver
 import threading
 import time
 
-from database import NetflowDB
+from database import get_connection
 from netflow_packet import ExportPacket
 
 
@@ -18,23 +19,19 @@ class NetflowWorker(threading.Thread):
         self.stop_flag = False
         self.device = []
         self.daemon = True
+        self.mongo = get_connection()
 
     def run(self):
         """ Create netflow Server
         """
-        # sys.stdout.write('\r'+' '*(len(readline.get_line_buffer())+2)+'\r')
-        # print('Starting...')
-        # sys.stdout.write('> ' + readline.get_line_buffer())
-        # sys.stdout.flush()
-        logging.debug("Starting...")
+        logging.info("Netflow server is starting...")
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # self.sock.settimeout(10)
-        # self.sock.setblocking(0)
+        # self.sock = socketserver.UDPServer((self.bind_ip, self.bind_port))
         self.sock.bind((self.bind_ip, self.bind_port))
-        logging.debug("Listening on interface {}:{}".format(self.bind_ip, self.bind_port))
+        logging.info("Netflow server: Listening on interface {}:{}".format(self.bind_ip, self.bind_port))
         _templates = {}
 
-        netflow_db = NetflowDB()
+        netflow_db = self.mongo.netflow
         while 1:
             if self.stop_flag:
                 self.sock.close()
@@ -44,34 +41,34 @@ class NetflowWorker(threading.Thread):
                 logging.debug("Received data from {}, length {}".format(sender, len(data)))
                 export = ExportPacket(data, _templates)
                 _templates.update(export.templates)
-                logging.debug("{:22}{:22}{:5} {}".format("SRC", "DST", "PROTO", "BYTES"))
+                logging.debug("Netflow server: {:22}{:22}{:5} {}".format("SRC", "DST", "PROTO", "BYTES"))
                 for flow in export.flows:
-                    netflow_db.insert(flow.data)
+                    netflow_db.insert_one(flow.data)
                     data = flow.data
-                    logging.debug("{:22}{:22}{:5} {}".format(
+                    logging.debug("Netflow server: {:22}{:22}{:5} {}".format(
                         data['ipv4_src_addr'],
                         data['ipv4_dst_addr'],
                         data['protocol'],
                         data['in_bytes']
                     ))
-                logging.debug("Processed ExportPacket with {} flows.".format(export.header.count))
-            except ValueError:
-                pass
-            except KeyError:
-                pass
-            except KeyboardInterrupt:
-                break
-            except socket.timeout:
-                continue
+                logging.debug("Netflow server: Processed ExportPacket with {} flows.".format(export.header.count))
+            except ValueError as e:
+                logging.debug(e)
+            except KeyError as e:
+                logging.debug(e)
+            except KeyboardInterrupt as e:
+                logging.debug(e)
+            except socket.timeout as e:
+                logging.debug(e)
             except Exception as e:
                 logging.debug(e)
 
-        logging.debug("Netflow server stopped loop")
+        logging.info("Netflow server: stopped loop")
 
     def shutdown(self):
         """ Stop netflow Server
         """
-        logging.debug("Shutdown Netflow server...")
+        logging.info("Netflow server: shutdown...")
         self.stop_flag = True
         socket.socket(socket.AF_INET, socket.SOCK_DGRAM).sendto(
             b'stop', (self.bind_ip, self.bind_port)

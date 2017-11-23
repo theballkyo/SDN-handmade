@@ -71,8 +71,8 @@ class LogBug:
                 #
                 # ANSI escape sequences (All VT100 except ESC[0G)
                 sys.stdout.write('\x1b[2K')                          # Clear current line
-                sys.stdout.write('\x1b[1A\x1b[2K'*(text_len//cols))  # Move cursor up and clear line
-                sys.stdout.write('\x1b[0G')                          # Move to start of line
+                # sys.stdout.write('\x1b[1A\x1b[2K'*(text_len//cols))  # Move cursor up and clear line
+                sys.stdout.write('\x1b[1000D')                          # Move to start of line
                 # print(record.__dict__)
 
                 if record is None:
@@ -85,10 +85,10 @@ class LogBug:
                     'levelname': record.levelname,
                     'message': record.message
                 }
-                print("{created} [{levelname}] {message}".format(**data))
+                sys.stdout.write("{created} [{levelname}] {message}\n".format(**data))
                 # sys.stdout.write(record)
-                # if self.is_wait_input:
-                sys.stdout.write(self.prompt + buff)
+                if self.is_wait_input:
+                    sys.stdout.write(self.prompt + buff)
                 sys.stdout.flush()
                 # # logger.handle(record) # No level or filter logic applied - just do it!
             except (KeyboardInterrupt, SystemExit):

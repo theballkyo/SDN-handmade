@@ -14,6 +14,11 @@ class SDNCommand(cmd.Cmd):
         self.logbug.prompt = self.prompt
         self.logbug.is_wait_input = True
 
+    def postcmd(self, stop, line):
+        self.logbug.prompt = self.prompt
+        self.logbug.is_wait_input = True
+        return cmd.Cmd.postcmd(self, stop, line)
+
     def precmd(self, line):
         self.logbug.prompt = self.prompt
         self.logbug.is_wait_input = False

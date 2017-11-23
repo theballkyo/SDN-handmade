@@ -7,13 +7,13 @@ from functools import reduce
 import gen_nb
 import gen_subnet
 import logbug
-from database import MongoDB
+from database import get_connection
 from netflow import NetflowWorker
 from netmiko import ConnectHandler
 from netmiko.ssh_exception import NetMikoTimeoutException
 from snmp_worker import SNMPWorker
 import sdn_utils
-
+from pymongo import UpdateOne
 
 class Route:
     def __init__(self):
@@ -54,10 +54,10 @@ class Device:
         self.route = []
         self.subnets = {}
 
-        self.mongo = MongoDB()
+        self.mongo = get_connection()
 
     def fork(self):
-        self.mongo = MongoDB()
+        self.mongo = get_connection()
 
     def update_info(self):
         self.mongo.device.update_one({
@@ -91,7 +91,6 @@ class Device:
             pass
         self.mongo.device.update_one({'device_ip': self.ip}, {'$inc', {'mark_offline_count': 1}})
 
-
     def get_status(self):
         self.init_device()
         return self.info['status']
@@ -116,29 +115,32 @@ class Device:
 
         self.info = info
 
-    def query(self, field):
+    def query(self, field, default=None):
         self.init_device()
-        return self.info.get(field, [])
+        return self.info.get(field, default)
 
     def get_name(self):
         """ Get device name
         """
-        self.init_device()
-        return self.info.get('name', 'Unknow')
+        return self.query('name', 'Unknown')
 
     def get_interfaces(self):
         """ Get interfaces of device
         """
-        # self.init_device()
-        # return self.info.get('interfaces', [])
-        return self.query('interfaces')
+        return self.query('interfaces', [])
+
+    def get_info(self):
+        self.init_device()
+        return self.info
+
+    def get_cdp(self):
+        return self.mongo.cdp.find_one({'device_ip': self.ip})
 
     def find_neighbor_by_name(self, name):
         """ Find neighbor by device name
             and return Device object
         """
         for device in self.neighbor:
-            # logbug.debug(device.get_name() + ":" + name)
             if device.get_name() == name:
                 return device
         return None
@@ -155,17 +157,16 @@ class Device:
     def get_routes(self):
         """ Get routes
         """
-        mongo = MongoDB()
-        self.route = mongo.route.find({'device_ip': self.ip}).sort([
-            ('ipCidrRouteDest', mongo.pymongo.ASCENDING),
-            ('ipCidrRouteMask', mongo.pymongo.DESCENDING)
+        self.init_device()
+        self.route = self.mongo.route.find({'device_ip': self.ip}).sort([
+            ('ipCidrRouteDest', self.mongo.pymongo.ASCENDING),
+            ('ipCidrRouteMask', self.mongo.pymongo.DESCENDING)
         ])
 
         return self.route
 
     def uptime(self):
-        self.init_device()
-        _time = self.info.get('uptime')
+        _time = self.query('uptime')
         if not _time:
             return "Down"
         return sdn_utils.millis_to_datetime(_time*10)
@@ -212,85 +213,86 @@ class CiscoRouter(Router):
         # }
         self.ssh_info['device_type'] = 'cisco_ios'
 
-        self.net_connect = None
+        self.net_connect = ConnectHandler(**ssh_info)
 
 
     def remote_command(self, command):
         """ Connect SSH to device
         """
-        if self.net_connect:
-            try:
-                # Try to reconnect
-                self.net_connect.establish_connection()
-            except NetMikoTimeoutException:
-                self.net_connect = None
-        # If can't establish connection, Create new connection
-        try:
-            self.net_connect = ConnectHandler(**self.ssh_info)
-        except NetMikoTimeoutException:
-            self.net_connect = None
-            logging.info("Error: Can't SSH to device ip {}".format(self.ip))
-            return None
-
+        if not self.test_ssh_connect():
+            return False
+        self.net_connect.enable()
         output = self.net_connect.send_command(command)
         return output
 
-    def send_config_set(self, config_command):
-        if self.net_connect:
+    def test_ssh_connect(self):
+        if self.net_connect is None or not self.net_connect.is_alive():
             try:
-                # Try to reconnect
-                self.net_connect.establish_connection()
+                logging.debug("ConnectHandler")
+                self.net_connect = ConnectHandler(**self.ssh_info)
             except NetMikoTimeoutException:
                 self.net_connect = None
-        # If can't establish connection, Create new connection
+                logging.info("Error: Can't SSH to device ip {}".format(self.ip))
+                return False
+        # TEST
+        retry = 0
+        max_retry = 3
+        while retry < max_retry:
+            try:
+                if retry > 0:
+                    self.net_connect = ConnectHandler(**self.ssh_info)
+                self.net_connect.enable()
+                return True
+            except (NetMikoTimeoutException, EOFError):
+                retry += 1
+        return False
+
+    def send_config_set(self, config_command):
+        if not self.test_ssh_connect():
+            return False
         try:
-            self.net_connect = ConnectHandler(**self.ssh_info)
-        except NetMikoTimeoutException:
-            self.net_connect = None
-            logging.info("Error: Can't SSH to device ip {}".format(self.ip))
-            return None
+            self.net_connect.enable()
+            output = self.net_connect.send_config_set(config_command)
+            return output
+        except (NetMikoTimeoutException, EOFError):
+            return False
 
-        output = self.net_connect.send_config_set(config_command)
-        return output
+    def update_flow(self, flow):
+        """ apply action to device
+        """
 
-    def map_action(self, flow, action):
-        acl_command1 = "ip access-list extend SDN-{}".format(flow['name'])
-        acl_command2 = "remark Generate by SDN Handmade for flow name".format(flow['name'])
-        # For debugging
-        acl_command3 = "permit udp "
-        if flow['src_ip'] == 'any':
-            acl_command3 += ' any'
-        elif flow['src_wildcard'] is None:
-            acl_command3 += ' host {}'.format(flow['src_ip'])
-        else:
-            acl_command3 += ' {} {}'.format(flow['src_ip'], flow['src_wildcard'])
-        if flow['src_port'] is not None:
-            if '-' in flow['src_port']:
-                port = flow['src_port'].split('-')
-                start_port = port[0]
-                end_port = port[1]
-                acl_command3 += ' range {} {}'.format(start_port, end_port)
-            else:
-                acl_command3 += ' eq {}'.format(flow['src_port'])
+        # is_in_flow = False
+        # for action in flow['action']:
+        #     if action['device_ip'] == self.ip:
+        #         is_in_flow = True
 
-        if flow['dst_ip'] == 'any':
-            acl_command3 += ' any'
-        elif flow['dst_wildcard'] is None:
-            acl_command3 += ' host {}'.format(flow['dst_ip'])
-        else:
-            acl_command3 += ' {} {}'.format(flow['dst_ip'], flow['dst_wildcard'])
-        if flow['dst_port'] is not None:
-            if '-' in flow['dst_port']:
-                port = flow['dst_port'].split('-')
-                start_port = port[0]
-                end_port = port[1]
-                acl_command3 += ' range {} {}'.format(start_port, end_port)
-            else:
-                acl_command3 += ' eq {}'.format(flow['dst_port'])
+        # is_in_flow_pending = False
+        my_action = None
+        for action in flow['action_pending']:
+            if action['device_ip'] == self.ip:
+                # is_in_flow_pending = True
+                my_action = action
+                break
 
-        command = [acl_command1, acl_command2, acl_command3]
+        if my_action is None:
+            return True
+
+        if my_action['rule'] == 'remove':
+            command = sdn_utils.generate_flow_remove_command(flow)
+            logging.debug(command)
+            if self.send_config_set(command) == False:
+                return False
+            return True
+
+        # Apply interface policy
+        # Todo
+
+        # Grouping commands
+        command = sdn_utils.generate_flow_command(flow, my_action)
         logging.debug(command)
-        self.send_config_set(command)
+        if self.send_config_set(command) == False:
+            return False
+        return True
 
     def get_serial_number(self):
         """ Get device serial Number
@@ -337,10 +339,22 @@ class Topology:
             netflow_port
         )
 
-        self.mongo = MongoDB()
+        self.mongo = get_connection()
 
+        self.init()
         # self.graph, self.matrix = self.create_graph()
-        logging.debug("Create topology")
+        logging.info("Create topology")
+
+    def init(self):
+        if self.mongo.flow_seq.find_one() is None:
+            # self.mongo.flow_seq.insert_one({
+            #     'seq': [{'number': i, 'in_use': False} for i in range(0, 65535)]
+            # })
+            for i in range(0, 65535):
+                self.mongo.flow_seq.insert_one({
+                    'number': i,
+                    'in_use': False
+                })
 
     def run(self):
         """ Start topoloygy loop
@@ -493,19 +507,47 @@ class Topology:
     def add_flow(self, flow):
         """ Add flow
         """
+
+        if flow.get('seq') is None:
+            seq = self.mongo.flow_seq.find_one({'in_use': False})
+            if seq is None:
+                return None
+            flow['seq'] = seq['number']
+
+            seq['in_use'] = True
+            self.mongo.flow_seq.update_one({
+                'number': seq['number']
+            }, {
+                '$set': seq
+            })
+
         self.mongo.flow_table.update_one({
             'name': flow['name']
         }, {
             '$set': flow
         }, upsert=True)
-        #
-        # _flow = self.mongo.flow_table.find_one({
-        #     'name': flow['name']
-        # })
-        # # logging.debug("Query flow result is {}", _flow)
-        # if _flow is None:
-        #     self.mongo.flow_table.insert_one(flow)
-        # else:
+
+        return flow
+
+    def apply_flow(self, flow_name):
+        flow = self.get_flow(flow_name)
+        if flow is None:
+            return
+        device_action = []
+
+        # Generate Access list command
+        command = sdn_utils.generate_acl(flow)
+
+        for action in flow['action']:
+            in_pending = False
+            for action_pending in flow['action_pending']:
+                if action['device_ip'] == action_pending['device_ip']:
+                    in_pending = True
+                    break
+            if not in_pending:
+                # remove flow
+                pass
+
 
     def get_flow(self, name):
         return self.mongo.flow_table.find_one({'name': name})
@@ -543,7 +585,7 @@ class Topology:
 
     def __add_device(self, device):
         if not isinstance(device, Device):
-            print("device argument is not instance of Device")
+            logging.info("device argument is not instance of Device")
             return
         self.devices.append(device)
         self.mongo.device_config.update_one({
@@ -558,3 +600,8 @@ class Topology:
         }, upsert=True)
         # Add to snmp worker
         self._snmp_worker.add_device(device, run=True)
+
+class Flow:
+    def __init__(self, flow_name):
+        mongo = get_connection()
+        flow = mongo.flow_table.find_one({'name': flow_name})

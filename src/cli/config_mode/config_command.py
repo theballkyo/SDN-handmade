@@ -3,19 +3,14 @@ import logging
 import ipaddress
 import sdn_utils
 
+
 class AddDeviceCommand():
     def __init__(self, topology, logbug):
-        # super(AddDeviceCommand, self).__init__()
         self.topology = topology
         self.logbug = logbug
-        # self.prompt = 'SDN Handmade (0.0.1)(config)# '
 
     def __input(self, prompt):
         inp = self.logbug.read_input(prompt)
-        # self.logbug.is_wait_input = True
-        # self.logbug.prompt = prompt
-        # inp = input(prompt)
-        # self.logbug.is_wait_input = False
         if inp == 'exit':
             raise KeyboardInterrupt
         return inp
@@ -114,9 +109,9 @@ class AddDeviceCommand():
             snmp_info['community'] = self.__get_snmp_community()
             snmp_info['port'] = self.__get_snmp_port()
 
-            logging.info("Device info %s", device_info)
-            logging.info("SSH info %s", ssh_info)
-            logging.info("SNMP info %s", snmp_info)
+            logging.debug("Device info %s", device_info)
+            logging.debug("SSH info %s", ssh_info)
+            logging.debug("SNMP info %s", snmp_info)
 
             device = self.topology.create_device_object(device_info, ssh_info, snmp_info)
             self.topology.add_device(device)
@@ -138,7 +133,7 @@ class FlowCommand(SDNCommand):
         self.flow = self.topology.get_flow(name)
 
         if self.flow is None:
-            self.flow = {
+            self.topology.add_flow({
                 'name': name,
                 'src_ip': None,
                 'src_port': None,
@@ -146,9 +141,10 @@ class FlowCommand(SDNCommand):
                 'dst_ip': None,
                 'dst_port': None,
                 'dst_wildcard': None,
-                'action': [
-                ]
-            }
+                'action': [],
+                'action_pending': []
+            })
+            self.flow = self.topology.get_flow(self.name)
 
     def do_match(self, args):
         if args == '':
@@ -275,19 +271,130 @@ class FlowCommand(SDNCommand):
                 'data': args[3]
             }
 
-        for i, action in enumerate(self.flow['action']):
+        for i, action in enumerate(self.flow['action_pending']):
             if action.get('device_ip') == device_ip:
-                self.flow['action'][i] = _action
+                self.flow['action_pending'][i] = _action
                 break
         else:
-            self.flow['action'].append(_action)
+            self.flow['action_pending'].append(_action)
         self.topology.add_flow(self.flow)
 
+    def do_no(self, args):
+        try:
+            args = args.split()
+            if args[0] == '':
+                return
+            if args[0] == 'set':
+                if args[1] == 'device':
+                    ip = args[2]
+                    for i, action in enumerate(self.flow['action']):
+                        if action['device_ip'] == ip:
+                            in_pending = False
+                            for i2, action_pending in enumerate(self.flow['action_pending']):
+                                if action_pending['device_ip'] == ip:
+                                    self.flow['action_pending'][i] = {
+                                        'rule': 'remove',
+                                        'device_ip': ip
+                                    }
+                                    in_pending = True
+                                    break
+                            if not in_pending:
+                                self.flow['action_pending'].append({
+                                    'rule': 'remove',
+                                    'device_ip': ip
+                                })
+                            self.topology.add_flow(self.flow)
+                            return
+                    for i, action in enumerate(self.flow['action_pending']):
+                        if action['device_ip'] == ip:
+                            del self.flow['action_pending'][i]
+                            self.topology.add_flow(self.flow)
+                            return
+
+        except (IndexError, ValueError):
+                print('Incorrect command')
+
     def do_apply(self, args):
-        for action in self.flow['action']:
-            print("Device IP {:18} - action {} data {}".format(action['device_ip'], action['rule'], action['data']))
-            device = self.topology.get_device_by_ip(action['device_ip'])
-            device.map_action(self.flow, action)
+        if len(self.flow['action_pending']) < 1:
+            return
+
+        for device in self.topology.devices:
+            if not device.test_ssh_connect():
+                print("Some device can't SSH, Stopped operations")
+                return
+        for device in self.topology.devices:
+            device.update_flow(self.flow)
+
+        # Remove
+        # del_count = 0
+        for i, action_pending in enumerate(self.flow['action_pending']):
+            in_action = False
+            del_count = 0
+            for i2, action in enumerate(self.flow['action']):
+                if action_pending['device_ip'] == action['device_ip']:
+                    in_action = True
+                    if action_pending['rule'] == 'remove':
+                        del self.flow['action'][i2-del_count]
+                        del_count += 1
+                    else:
+                        self.flow['action'][i2-del_count] = action_pending
+                    break
+            if not in_action:
+                self.flow['action'].append(action_pending)
+
+        logging.debug(self.flow['action'])
+        # self.flow['action'] = new_action
+        self.flow['action_pending'] = []
+        self.topology.add_flow(self.flow)
+
+        print("Apply flow success.")
+
+    def do_detail(self, args):
+        print('================== Flow name: {} =================='.format(self.flow['name']))
+
+        print("Match: src ", end='')
+        if self.flow['src_wildcard'] is None:
+            print("host {}".format(self.flow['src_ip']), end='')
+        else:
+            print("{} {}".format(self.flow['src_ip'], self.flow['src_wildcard']), end='')
+        if self.flow['src_port'] is not None:
+            print(" port {}".format(self.flow['src_port']))
+        else:
+            print("")
+        print("       dst ", end='')
+        if self.flow['dst_wildcard'] is None:
+            print("host {}".format(self.flow['dst_ip']), end='')
+        else:
+            print("{} {}".format(self.flow['dst_ip'], self.flow['dst_wildcard']), end='')
+        if self.flow['dst_port'] is not None:
+            print(" port {}".format(self.flow['dst_port']))
+        else:
+            print("")
+
+        print("Current actions:", end='')
+        for i, action in enumerate(self.flow['action']):
+            if i == 0:
+                margin = 1
+            else:
+                margin = 17
+            print((" " * margin) + "Device: {:15} -> {} {}".format(
+                action['device_ip'],
+                action['rule'],
+                action.get('data') or ''
+            ))
+        print('')
+        print("Pending actions:", end='')
+        for i, action in enumerate(self.flow['action_pending']):
+            if i == 0:
+                margin = 1
+            else:
+                margin = 17
+            print((" " * margin) + "Device: {:15} -> {} {}".format(
+                action['device_ip'],
+                action['rule'],
+                action.get('data') or ''
+            ))
+        print('')
 
 class ConfigCommand(SDNCommand):
     _AVAILABLE_ADD = ('device',)

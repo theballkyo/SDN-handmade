@@ -2,14 +2,10 @@ import asyncio
 import logging
 import multiprocessing
 import queue
-import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed, wait
-
-from pymongo import ReplaceOne
 
 import sdn_utils
-from database import MongoDB
+from database import get_connection, disconnect
 from snmp_async import (get_cdp, get_interfaces, get_ip_addr, get_lldp,
                         get_routes, get_system_info)
 
@@ -55,21 +51,20 @@ class SNMPWorker(multiprocessing.Process):
         """ Remove device from worker
         """
         try:
-            self.devices.remove(device)
             for _ in self.device_running:
                 self.__shutdown.put(device.ip)
             for device_run in self.device_running:
                 if device_run.name == device.ip:
                     self.device_running.remove(device_run)
                     break
+            self.devices.remove(device)
         except ValueError:
             pass
 
     async def get_and_store(self, device):
         """ Get snmp infomation and add to database
         """
-        mongo = MongoDB()
-
+        mongo = get_connection()
         # Status = Working...
         device.set_status(device.STATUS_SNMP_WORKING)
 
@@ -87,7 +82,7 @@ class SNMPWorker(multiprocessing.Process):
         )
 
         if all(r is None for r in results):
-            logging.debug("SNMP Worker: Device ip %s is gone down", host)
+            logging.info("SNMP Worker: Device ip %s is gone down", host)
             return
 
         system_info = results[0]
@@ -96,6 +91,11 @@ class SNMPWorker(multiprocessing.Process):
         interfaces = results[3]
         # CDP
         cdp = results[4]
+        # print(type(cdp))
+        if cdp is None:
+            cdp_enable = False
+        else:
+            cdp_enable = True
         # LLDP
         # lldp = results[5]
 
@@ -159,6 +159,7 @@ class SNMPWorker(multiprocessing.Process):
                         break
 
         system_info['interfaces'] = interfaces
+        system_info['cdp_enable'] = cdp_enable
 
         # Clear old routes
         mongo.db.route.delete_many({
@@ -176,7 +177,7 @@ class SNMPWorker(multiprocessing.Process):
         }, upsert=True)
 
         # Update device object
-        device.info = system_info
+        # device.info = system_info
 
         # Insert CDP
         mongo.db.cdp.update_one({
@@ -220,22 +221,24 @@ class SNMPWorker(multiprocessing.Process):
                 break
         loop.close()
         logging.debug("SNMP Worker: device IP %s has stopped", device.ip)
+        # Disconnect MongoDB
+        disconnect()
 
     def shutdown(self):
         """ shutdown
         """
         # Todo
-        logging.debug("SNMP Worker: shutdown...")
+        logging.info("SNMP Worker: shutdown...")
         for _ in range(len(self.device_running)+2):
             logging.debug("SNMP Worker send shutdown signal")
             self.__shutdown.put(True)
             time.sleep(0.1)
         time.sleep(2)
         for device_proc in self.device_running:
-            logging.debug("SNMP Worker: wait for process end...")
+            logging.info("SNMP Worker: wait for process end...")
             logging.debug(device_proc)
             device_proc.join(30)
-        logging.debug("SNMP Worker: shutdown complete")
+        logging.info("SNMP Worker: shutdown complete")
 
     def run(self):
         for device in self.devices:
