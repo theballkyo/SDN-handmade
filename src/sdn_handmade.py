@@ -268,6 +268,7 @@ class CiscoRouter(Router):
 
         # is_in_flow_pending = False
         my_action = None
+        current_action = None
         for action in flow['action_pending']:
             if action['device_ip'] == self.ip:
                 # is_in_flow_pending = True
@@ -275,21 +276,28 @@ class CiscoRouter(Router):
                 break
 
         if my_action is None:
-            return True
-
-        if my_action['rule'] == 'remove':
-            command = sdn_utils.generate_flow_remove_command(flow)
-            logging.debug(command)
-            if self.send_config_set(command) == False:
-                return False
-            return True
+            if flow['is_pending'] == False:
+                return True
+        else:
+            if my_action.get('rule') == 'remove':
+                command = sdn_utils.generate_flow_remove_command(flow)
+                logging.debug(command)
+                if self.send_config_set(command) == False:
+                    return False
+                return True
+            else:
+                for action in flow['action']:
+                    if action['device_ip'] == self.ip:
+                        current_action = action
+                        break
 
         # Apply interface policy
         # Todo
 
+
         # Grouping commands
-        command = sdn_utils.generate_flow_command(flow, my_action)
-        logging.debug(command)
+        command = sdn_utils.generate_flow_command(flow, my_action, current_action)
+        # logging.info(command)
         if self.send_config_set(command) == False:
             return False
         return True

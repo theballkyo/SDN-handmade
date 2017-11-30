@@ -22,7 +22,6 @@ def create_graph(devices):
     for n1 in range(num_device):
         # Resetting neighbor
         devices[n1].neighbor = []
-        device_1_info = devices[n1].get_info()
         device_1_name = devices[n1].get_name()
         _matrix = {
             'name': device_1_name,
@@ -37,11 +36,13 @@ def create_graph(devices):
                 neighbor_device = conn.device.find_one({
                     'interfaces.ipv4_address': neighbor.get('ip_addr')
                 })
+                if neighbor_device is None:
+                    continue
                 if_index = -1
-                for interface in neighbor_device['interfaces']:
+                for neighbor_interface in neighbor_device.get('interfaces'):
                     # Default is -1, -2 because if no IP is not match
-                    if interface.get('ipv4_address', -1) == neighbor.get('ip_addr', -2):
-                        if_index = interface['index']
+                    if neighbor_interface.get('ipv4_address', -1) == neighbor.get('ip_addr', -2):
+                        if_index = neighbor_interface['index']
                         break
                 neighbor_info = {
                     "neighbor_ip": neighbor['ip_addr'],
@@ -53,7 +54,7 @@ def create_graph(devices):
                 }
                 devices[n1].neighbor.append(neighbor_info)
                 for device in devices:
-                    if device.ip == neighbor.get('ip_addr'):
+                    if device.ip == neighbor_device.get('device_ip'):
                         graph[devices[n1]].append(device)
                         break
             continue
@@ -82,8 +83,8 @@ def create_graph(devices):
 
 
                 ### TEST
-                if d1_ip in ipcalc.Network('192.168.106.0', '255.255.255.0'):
-                    continue
+                # if d1_ip in ipcalc.Network('192.168.106.0', '255.255.255.0'):
+                #     continue
                 ### END TEST
 
                 for n4 in range(len(device_2_if)):
@@ -109,7 +110,7 @@ def create_graph(devices):
                 #     break
         #     _matrix['connected'].append(_d2_matrix)
         # matrix.append(_matrix)
-    # logging.debug(graph)
+    logging.debug(graph)
     topo_graph = Graph(graph)
     # print(matrix)
     return topo_graph
@@ -137,7 +138,8 @@ def print_matrix(devices, use_cdp=False):
     for device_row in devices:
         print('{:{width}s}'.format(device_row.get_name(), width=width), end='')
         for device_col in devices:
-            if {device_row, device_col} in edges or device_col == device_row:
+            if {device_row, device_col} in edges or {device_col, device_row} in edges\
+                    or device_col == device_row:
                 print('{:^{width}s}'.format(str(1), width=width), end='')
             else:
                 print('{:^{width}s}'.format(str(0), width=width), end='')

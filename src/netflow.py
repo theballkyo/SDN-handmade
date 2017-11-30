@@ -41,17 +41,18 @@ class NetflowWorker(threading.Thread):
                 logging.debug("Received data from {}, length {}".format(sender, len(data)))
                 export = ExportPacket(data, _templates)
                 _templates.update(export.templates)
-                logging.debug("Netflow server: {:22}{:22}{:5} {}".format("SRC", "DST", "PROTO", "BYTES"))
+                # logging.debug("Netflow server: {:22}{:22}{:5} {}".format("SRC", "DST", "PROTO", "BYTES"))
                 for flow in export.flows:
+                    flow.data['device_ip'] = str(sender[0])
                     netflow_db.insert_one(flow.data)
                     data = flow.data
-                    logging.debug("Netflow server: {:22}{:22}{:5} {}".format(
-                        data['ipv4_src_addr'],
-                        data['ipv4_dst_addr'],
-                        data['protocol'],
-                        data['in_bytes']
-                    ))
-                logging.debug("Netflow server: Processed ExportPacket with {} flows.".format(export.header.count))
+                #     logging.debug("Netflow server: {:22}{:22}{:5} {}".format(
+                #         data['ipv4_src_addr'],
+                #         data['ipv4_dst_addr'],
+                #         data['protocol'],
+                #         data['in_bytes']
+                #     ))
+                # logging.debug("Netflow server: Processed ExportPacket with {} flows.".format(export.header.count))
             except ValueError as e:
                 logging.debug(e)
             except KeyError as e:

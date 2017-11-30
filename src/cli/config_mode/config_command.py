@@ -36,7 +36,7 @@ class AddDeviceCommand():
                 print("IP format not correct")
 
     def __get_snmp_community(self):
-        inp = self.__input("SNMP Community string (default `public`): ")
+        inp = self.__input("SNMP Community string [public]: ")
         if inp == '':
             return 'public'
         return inp
@@ -51,7 +51,7 @@ class AddDeviceCommand():
 
     def __get_snmp_port(self):
         while 1:
-            inp = self.__input("SNMP Port (default `161`): ")
+            inp = self.__input("SNMP Port [161]: ")
             if inp == '':
                 return 161
             if not inp.isdigit():
@@ -68,7 +68,7 @@ class AddDeviceCommand():
 
     def __get_ssh_port(self):
         while 1:
-            inp = self.__input("SSH Port (default `22`): ")
+            inp = self.__input("SSH Port [22]: ")
             if inp == '':
                 return 22
             if not inp.isdigit():
@@ -141,8 +141,17 @@ class FlowCommand(SDNCommand):
                 'dst_ip': None,
                 'dst_port': None,
                 'dst_wildcard': None,
+                'pending': {
+                    'src_ip': 'any',
+                    'src_port': None,
+                    'src_wildcard': None,
+                    'dst_ip': 'any',
+                    'dst_port': None,
+                    'dst_wildcard': None,
+                },
                 'action': [],
-                'action_pending': []
+                'action_pending': [],
+                'is_pending': False
             })
             self.flow = self.topology.get_flow(self.name)
 
@@ -157,26 +166,26 @@ class FlowCommand(SDNCommand):
                 print('Incomplete command.')
             elif len(args[1:]) == 1:
                 # { any }
-                self.flow['src_ip'] = 'any'
-                self.flow['src_port'] = None
-                self.flow['src_wildcard'] = None
+                self.flow['pending']['src_ip'] = 'any'
+                self.flow['pending']['src_port'] = None
+                self.flow['pending']['src_wildcard'] = None
             elif len(args[1:]) == 2:
                 # { host 192.168.1.1 | 192.168.1.0 0.0.0.255 }
                 if args[1] == 'host':
-                    self.flow['src_ip'] = args[2]
-                    self.flow['src_port'] = None
-                    self.flow['src_wildcard'] = None
+                    self.flow['pending']['src_ip'] = args[2]
+                    self.flow['pending']['src_port'] = None
+                    self.flow['pending']['src_wildcard'] = None
                 else:
-                    self.flow['src_ip'] = args[1]
-                    self.flow['src_port'] = None
-                    self.flow['src_wildcard'] = args[2]
+                    self.flow['pending']['src_ip'] = args[1]
+                    self.flow['pending']['src_port'] = None
+                    self.flow['pending']['src_wildcard'] = args[2]
             elif len(args[1:]) == 3:
                 # { any port 80 | any port-range 80-8000 }
                 # host = args[1]
                 port = args[3]
-                self.flow['src_ip'] = 'any'
-                self.flow['src_port'] = port
-                self.flow['src_wildcard'] = None
+                self.flow['pending']['src_ip'] = 'any'
+                self.flow['pending']['src_port'] = port
+                self.flow['pending']['src_wildcard'] = None
             elif len(args[1:]) == 4:
                 # { host 192.168.1.1 port 80 | host 192.168.1.1 port-range 80-8000 }
                 # { 192.168.1.0 0.0.0.255 port 80 | 192.168.1.0 0.0.0.255 port-range 80-8000 }
@@ -187,34 +196,34 @@ class FlowCommand(SDNCommand):
                     host = args[1]
                     wildcard = args[2]
                 port = args[4]
-                self.flow['src_ip'] = host
-                self.flow['src_wildcard'] = wildcard
-                self.flow['src_port'] = port
+                self.flow['pending']['src_ip'] = host
+                self.flow['pending']['src_wildcard'] = wildcard
+                self.flow['pending']['src_port'] = port
         elif args[0] == 'dest':
             if len(args[1:]) == 0:
                 print('Incomplete command.')
             elif len(args[1:]) == 1:
                 # { any }
-                self.flow['dst_ip'] = 'any'
-                self.flow['dst_port'] = None
-                self.flow['dst_wildcard'] = None
+                self.flow['pending']['dst_ip'] = 'any'
+                self.flow['pending']['dst_port'] = None
+                self.flow['pending']['dst_wildcard'] = None
             elif len(args[1:]) == 2:
                 # { host 192.168.1.1 | 192.168.1.0 0.0.0.255 }
                 if args[1] == 'host':
-                    self.flow['dst_ip'] = args[2]
-                    self.flow['dst_port'] = None
-                    self.flow['dst_wildcard'] = None
+                    self.flow['pending']['dst_ip'] = args[2]
+                    self.flow['pending']['dst_port'] = None
+                    self.flow['pending']['dst_wildcard'] = None
                 else:
-                    self.flow['dst_ip'] = args[1]
-                    self.flow['dst_port'] = None
-                    self.flow['dst_wildcard'] = args[2]
+                    self.flow['pending']['dst_ip'] = args[1]
+                    self.flow['pending']['dst_port'] = None
+                    self.flow['pending']['dst_wildcard'] = args[2]
             elif len(args[1:]) == 3:
                 # { any port 80 | any port-range 80-8000 }
                 # host = args[1]
                 port = args[3]
-                self.flow['dst_ip'] = 'any'
-                self.flow['dst_port'] = port
-                self.flow['dst_wildcard'] = None
+                self.flow['pending']['dst_ip'] = 'any'
+                self.flow['pending']['dst_port'] = port
+                self.flow['pending']['dst_wildcard'] = None
             elif len(args[1:]) == 4:
                 # { host 192.168.1.1 port 80 | host 192.168.1.1 port-range 80-8000 }
                 # { 192.168.1.0 0.0.0.255 port 80 | 192.168.1.0 0.0.0.255 port-range 80-8000 }
@@ -225,10 +234,11 @@ class FlowCommand(SDNCommand):
                     host = args[1]
                     wildcard = args[2]
                 port = args[4]
-                self.flow['dst_ip'] = host
-                self.flow['dst_wildcard'] = wildcard
-                self.flow['dst_port'] = port
+                self.flow['pending']['dst_ip'] = host
+                self.flow['pending']['dst_wildcard'] = wildcard
+                self.flow['pending']['dst_port'] = port
 
+        self.flow['is_pending'] = True
         self.topology.add_flow(self.flow)
 
     def do_set(self, args):
@@ -245,9 +255,9 @@ class FlowCommand(SDNCommand):
             return
 
         # Get action
-        # Now, { drop | next-hop | exit-if-index }
+        # Now, { drop | next-hop | exit-if }
         action = args[2]
-        if action in ('next-hop', 'exit-if-index') and len(args) < 4:
+        if action in ('next-hop', 'exit-if') and len(args) < 4:
             print('Incomplete command.')
             return
 
@@ -264,10 +274,10 @@ class FlowCommand(SDNCommand):
                 'rule': 'next-hop',
                 'data': args[3]
             }
-        elif action == 'exit-if-index':
+        elif action == 'exit-if':
             _action = {
                 'device_ip': device_ip,
-                'rule': 'exit-if-index',
+                'rule': 'exit-if',
                 'data': args[3]
             }
 
@@ -277,6 +287,8 @@ class FlowCommand(SDNCommand):
                 break
         else:
             self.flow['action_pending'].append(_action)
+
+        # self.flow['is_pending'] = True
         self.topology.add_flow(self.flow)
 
     def do_no(self, args):
@@ -315,7 +327,7 @@ class FlowCommand(SDNCommand):
                 print('Incorrect command')
 
     def do_apply(self, args):
-        if len(self.flow['action_pending']) < 1:
+        if len(self.flow['action_pending']) < 1 and self.flow['is_pending'] == False:
             return
 
         for device in self.topology.devices:
@@ -345,6 +357,13 @@ class FlowCommand(SDNCommand):
         logging.debug(self.flow['action'])
         # self.flow['action'] = new_action
         self.flow['action_pending'] = []
+        self.flow['src_ip'] = self.flow['pending']['src_ip']
+        self.flow['src_port'] = self.flow['pending']['src_port']
+        self.flow['src_wildcard'] = self.flow['pending']['src_wildcard']
+        self.flow['dst_ip'] = self.flow['pending']['dst_ip']
+        self.flow['dst_port'] = self.flow['pending']['dst_port']
+        self.flow['dst_wildcard'] = self.flow['pending']['dst_wildcard']
+        self.flow['is_pending'] = False
         self.topology.add_flow(self.flow)
 
         print("Apply flow success.")
@@ -430,6 +449,10 @@ class ConfigCommand(SDNCommand):
             return
         FlowCommand(self.topology, self.logbug, args.split(' ')[0]).cmdloop()
 
+    def complete_flow(self, text, line, begidx, endidx):
+        flows = self.topology.get_flows()
+        # logging.info(flows)
+        return [i['name'] for i in flows if i['name'].startswith(text)]
 
     def do_add(self, args):
         """ Using to add something

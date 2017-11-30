@@ -27,6 +27,7 @@ class LogBug:
         self.prompt = ''
         self.is_wait_input = False
         self.shutdown = False
+        self.log_level = 20
         # self.sys = sys
 
     def pre_shutdown(self):
@@ -60,6 +61,14 @@ class LogBug:
             try:
                 # time.sleep(1)
                 record = self.queue.get()
+                if record is None:
+                    if self.shutdown:  # We send this as a sentinel to tell the listener to quit.
+                        print("LogBug -> shutdown listener thread")
+                        break
+                    continue
+
+                if record.levelno < self.log_level:
+                    continue
 
                 # # logger = logging.getLogger(record.name)
                 buff = readline.get_line_buffer()
@@ -75,17 +84,13 @@ class LogBug:
                 sys.stdout.write('\x1b[1000D')                          # Move to start of line
                 # print(record.__dict__)
 
-                if record is None:
-                    if self.shutdown: # We send this as a sentinel to tell the listener to quit.
-                        print("LogBug -> shutdown listener thread")
-                        break
-                    continue
                 data = {
                     'created': datetime.fromtimestamp(record.created),
+                    'levelno': record.levelno,
                     'levelname': record.levelname,
                     'message': record.message
                 }
-                sys.stdout.write("{created} [{levelname}] {message}\n".format(**data))
+                sys.stdout.write("{created} [{levelname}({levelno})] {message}\n".format(**data))
                 # sys.stdout.write(record)
                 if self.is_wait_input:
                     sys.stdout.write(self.prompt + buff)
