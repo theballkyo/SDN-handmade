@@ -89,7 +89,7 @@ class CLIController(SDNCommand):
         """ Print pretty interfaces
         """
         for interface in interfaces:
-            print("Name {:25} IP {:18} BW in {:.3f}% out {:.3f}%".format(
+            print("Name {:30} IP {:18} BW in {:.3f}% out {:.3f}%".format(
                 interface.get('description', 'No name'),
                 interface.get('ipv4_address', 'No IP address'),
                 interface.get('bw_in_usage_percent', 0.0),
