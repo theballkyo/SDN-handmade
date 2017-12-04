@@ -116,16 +116,17 @@ class CLIController(SDNCommand):
             'ipCidrRouteDest': dst_network,
             'ipCidrRouteMask': dst_mask
         })
-        start_device = src_route.get('device_ip')
+        start_device_ip = src_route.get('device_ip')
 
         stop_flag = False
         for _ in range(dest.count()):
             for route in dest:
-                if route.get('device_ip') == start_device:
+                if route.get('device_ip') == start_device_ip:
                     path.append(route.get('device_ip'))
                     start_device = mongo.device.find_one({
                         'interfaces.ipv4_address': route.get('ipCidrRouteNextHop')
                     })
+                    start_device_ip = start_device.get('device_ip')
                     # Stop
                     if route.get('ipCidrRouteType') == 3:
                         stop_flag = True
