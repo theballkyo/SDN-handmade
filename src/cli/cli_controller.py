@@ -62,7 +62,7 @@ class CLIController(SDNCommand):
                 print(flow)
             return
         elif args[0] == 'route':
-            return show_route(args[1:])
+            return self.show_route(args[1:])
         elif args[0] == 'graph':
             print(self.topology.create_graph())
         elif args[0] == 'topology':
