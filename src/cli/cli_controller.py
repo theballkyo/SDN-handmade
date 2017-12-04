@@ -119,7 +119,7 @@ class CLIController(SDNCommand):
         start_device = src_route.get('device_ip')
 
         stop_flag = False
-        for _ in range(len(dest)):
+        for _ in range(dest.count()):
             for route in dest:
                 if route.get('device_ip') == start_device:
                     path.append(route.get('device_ip'))
