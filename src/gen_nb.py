@@ -53,10 +53,10 @@ def create_graph(devices):
                     "port": neighbor['port']
                 }
                 devices[n1].neighbor.append(neighbor_info)
-                # for device in devices:
-                #     if device.ip == neighbor_device.get('device_ip'):
-                graph[devices[n1]].append(neighbor_device)
-                break
+                for device in devices:
+                    if device.ip == neighbor_device.get('device_ip'):
+                        graph[devices[n1]].append(neighbor_device)
+                        break
             continue
         # If CDP Not enable use SNMP
         for n2 in range(num_device):
