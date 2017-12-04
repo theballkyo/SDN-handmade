@@ -91,7 +91,7 @@ class CLIController(SDNCommand):
         """ Display route information
         """
         # Check argument
-        args = args.split(' ')
+        # args = args.split(' ')
         if len(args) != 4:
             print("Usage: show route {host <source addr> | <source network> <source mask>} {host <destination addr> | <destination network> <destination mask>}")
             return
