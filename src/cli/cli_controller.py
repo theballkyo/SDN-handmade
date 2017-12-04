@@ -119,6 +119,7 @@ class CLIController(SDNCommand):
         start_device_ip = src_route.get('device_ip')
 
         stop_flag = False
+        logging.info(dest.count())
         for _ in range(dest.count()):
             for route in dest:
                 logging.info("%s :: %s", route.get('device_ip'), start_device_ip)
@@ -133,7 +134,7 @@ class CLIController(SDNCommand):
                     if route.get('ipCidrRouteType') == 3:
                         stop_flag = True
                     break
-            if stop_flag:
+            if stop_flag == True:
                 break
         logging.info(path)
 
