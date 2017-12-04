@@ -6,11 +6,11 @@ from .topology_command import TopologyCommand
 from .device_command import DeviceCommand
 from .show_command import ShowCommand
 from .config_mode.config_command import ConfigCommand
-
+from database import get_connection
 
 class CLIController(SDNCommand):
 
-    _COMPLETE_SHOW = ('device', 'flow', 'topology', 'graph', 'version')
+    _COMPLETE_SHOW = ('device', 'flow', 'topology', 'graph', 'version', 'route')
 
     def init(self, topology, logbug, version):
         self.topology = topology
@@ -61,6 +61,8 @@ class CLIController(SDNCommand):
             for flow in self.topology.get_flows():
                 print(flow)
             return
+        elif args[0] == 'route':
+            return show_route(args[1:])
         elif args[0] == 'graph':
             print(self.topology.create_graph())
         elif args[0] == 'topology':
@@ -84,6 +86,53 @@ class CLIController(SDNCommand):
             logging.debug(device_list)
             return device_list
         return [i for i in self._COMPLETE_SHOW if i.startswith(text)]
+
+    def show_route(self, args):
+        """ Display route information
+        """
+        # Check argument
+        args = args.split(' ')
+        if len(args) != 4:
+            print("Usage: show route {host <source addr> | <source network> <source mask>} {host <destination addr> | <destination network> <destination mask>}")
+            return
+
+        # Todo implement find by host
+        if args[0] == 'host' or args[2] == 'host':
+            pass
+
+        src_network, src_mask, dst_network, dst_mask = args
+        mongo = get_connection()
+        # src_device = mongo.device.find_one({'interfaces.'})
+        src_route = mongo.route.find_one({
+                                    'ipCidrRouteType': 3,
+                                    'ipCidrRouteDest': src_network,
+                                    'ipCidrRouteMask': src_mask
+                                    })
+        if src_route is None:
+            print("Can't find source network {} {}".format(src_network, src_mask))
+            return
+        path = []
+        dest = mongo.route.find_one({
+            'ipCidrRouteDest': dst_network,
+            'ipCidrRouteMask': dst_mask
+        })
+        start_device = src_route.get('device_ip')
+
+        stop_flag = False
+        for _ in range(len(dest)):
+            for route in dest:
+                if route.get('device_ip') == start_device:
+                    path.append(route.get('device_ip'))
+                    start_device = mongo.device.find_one({
+                        'interfaces.ipv4_address': route.get('ipCidrRouteNextHop')
+                    })
+                    # Stop
+                    if route.get('ipCidrRouteType') == 3:
+                        stop_flag = True
+                    break
+            if stop_flag:
+                break
+        print(path)
 
     def print_interfaces(self, interfaces):
         """ Print pretty interfaces
