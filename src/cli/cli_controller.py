@@ -135,7 +135,7 @@ class CLIController(SDNCommand):
                     break
             if stop_flag:
                 break
-        print(path)
+        logging.info(path)
 
     def print_interfaces(self, interfaces):
         """ Print pretty interfaces
