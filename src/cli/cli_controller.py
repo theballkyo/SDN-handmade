@@ -127,6 +127,7 @@ class CLIController(SDNCommand):
                         'interfaces.ipv4_address': route.get('ipCidrRouteNextHop')
                     })
                     start_device_ip = start_device.get('device_ip')
+                    logging.debug(start_device_ip)
                     # Stop
                     if route.get('ipCidrRouteType') == 3:
                         stop_flag = True
