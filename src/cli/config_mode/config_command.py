@@ -155,6 +155,13 @@ class FlowCommand(SDNCommand):
             })
             self.flow = self.topology.get_flow(self.name)
 
+        self.flow['pending']['src_ip'] = self.flow['src_ip']
+        self.flow['pending']['src_port'] = self.flow['src_port']
+        self.flow['pending']['src_wildcard'] = self.flow['src_wildcard']
+        self.flow['pending']['dst_ip'] = self.flow['dst_ip']
+        self.flow['pending']['dst_port'] = self.flow['dst_port']
+        self.flow['pending']['dst_wildcard'] = self.flow['dst_wildcard']
+
     def do_match(self, args):
         if args == '':
             print('Incomplete command.')
@@ -364,14 +371,14 @@ class FlowCommand(SDNCommand):
         self.flow['dst_port'] = self.flow['pending']['dst_port']
         self.flow['dst_wildcard'] = self.flow['pending']['dst_wildcard']
         self.flow['is_pending'] = False
-        self.flow['pending'] = {
-            'src_ip': 'any',
-            'src_port': None,
-            'src_wildcard': None,
-            'dst_ip': 'any',
-            'dst_port': None,
-            'dst_wildcard': None,
-        }
+        # self.flow['pending'] = {
+        #     'src_ip': 'any',
+        #     'src_port': None,
+        #     'src_wildcard': None,
+        #     'dst_ip': 'any',
+        #     'dst_port': None,
+        #     'dst_wildcard': None,
+        # }
         self.topology.add_flow(self.flow)
 
         print("Apply flow success.")
