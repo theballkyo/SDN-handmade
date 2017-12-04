@@ -297,7 +297,7 @@ class CiscoRouter(Router):
 
         # Grouping commands
         command = sdn_utils.generate_flow_command(flow, my_action, current_action)
-        # logging.info(command)
+        logging.info(command)
         if self.send_config_set(command) == False:
             return False
         return True
