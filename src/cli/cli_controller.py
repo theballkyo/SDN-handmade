@@ -112,7 +112,7 @@ class CLIController(SDNCommand):
             print("Can't find source network {} {}".format(src_network, src_mask))
             return
         path = []
-        dest = mongo.route.find_one({
+        dest = mongo.route.find({
             'ipCidrRouteDest': dst_network,
             'ipCidrRouteMask': dst_mask
         })
