@@ -1,0 +1,2 @@
+2017-12-04 18:06:40.344488 [ERROR(40)] Exception in callback AbstractTransportDispatcher._cbFun(<pysnmp.carri...x7f67256cd390>, ('192.168.1.14', 161), b'0\x82\x05o\...r\x02\x01\x08')
+handle: <Handle AbstractTransportDispatcher._cbFun(<pysnmp.carri...x7f67256cd390>, ('192.168.1.14', 161), b'0\x82\x05o\...r\x02\x01\x08')>
