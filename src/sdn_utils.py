@@ -59,6 +59,7 @@ def generate_flow_remove_command(flow):
 
 def generate_flow_command(flow, action, current_action):
     acl_command1 = "ip access-list extended SDN-{}".format(flow['name'])
+    acl_command0 = "no " + acl_command1
     acl_command2 = "remark Generate by SDN Handmade for flow name".format(flow['name'])
     # For debugging
     acl_command3 = "10 permit udp"
@@ -122,4 +123,4 @@ def generate_flow_command(flow, action, current_action):
     else:
         rmap_3 = ''
 
-    return [acl_command1, acl_command2, acl_command3, acl_command4, acl_command5, rmap_1, rmap_2, rmap_21, rmap_3]
+    return [acl_command0, acl_command1, acl_command2, acl_command3, acl_command4, acl_command5, rmap_1, rmap_2, rmap_21, rmap_3]
