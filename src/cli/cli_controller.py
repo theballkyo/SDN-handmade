@@ -119,7 +119,6 @@ class CLIController(SDNCommand):
         start_device_ip = src_route.get('device_ip')
 
         stop_flag = False
-        logging.info(dest.count())
         for _ in range(dest.count()):
             for route in dest.clone():
                 logging.info("%s :: %s", route.get('device_ip'), start_device_ip)
@@ -134,12 +133,13 @@ class CLIController(SDNCommand):
                         'interfaces.ipv4_address': route.get('ipCidrRouteNextHop')
                     })
                     start_device_ip = start_device.get('device_ip')
-                    logging.info(start_device_ip)
+                    # logging.info(start_device_ip)
                     break
-                    
+
             if stop_flag == True:
                 break
-        logging.info(path)
+
+        print(" -> ".join(path))
 
     def print_interfaces(self, interfaces):
         """ Print pretty interfaces
