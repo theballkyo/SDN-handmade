@@ -121,7 +121,7 @@ class CLIController(SDNCommand):
         stop_flag = False
         for _ in range(dest.count()):
             for route in dest.clone():
-                logging.info("%s :: %s", route.get('device_ip'), start_device_ip)
+                logging.debug("%s :: %s", route.get('device_ip'), start_device_ip)
                 if route.get('device_ip') == start_device_ip:
                     path.append(route.get('device_ip'))
                     # Stop
