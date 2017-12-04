@@ -112,16 +112,16 @@ class CLIController(SDNCommand):
             print("Can't find source network {} {}".format(src_network, src_mask))
             return
         path = []
-        dest = mongo.route.find({
-            'ipCidrRouteDest': dst_network,
-            'ipCidrRouteMask': dst_mask
-        })
         start_device_ip = src_route.get('device_ip')
 
         stop_flag = False
         logging.info(dest.count())
         for _ in range(dest.count()):
-            for route in dest:
+            dest = mongo.route.find({
+                'ipCidrRouteDest': dst_network,
+                'ipCidrRouteMask': dst_mask
+            })
+            for route in dest.clone():
                 logging.info("%s :: %s", route.get('device_ip'), start_device_ip)
                 if route.get('device_ip') == start_device_ip:
                     path.append(route.get('device_ip'))
