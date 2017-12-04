@@ -121,13 +121,14 @@ class CLIController(SDNCommand):
         stop_flag = False
         for _ in range(dest.count()):
             for route in dest:
+                logging.info("%s :: %s", route.get('device_ip'), start_device_ip)
                 if route.get('device_ip') == start_device_ip:
                     path.append(route.get('device_ip'))
                     start_device = mongo.device.find_one({
                         'interfaces.ipv4_address': route.get('ipCidrRouteNextHop')
                     })
                     start_device_ip = start_device.get('device_ip')
-                    logging.debug(start_device_ip)
+                    logging.info(start_device_ip)
                     # Stop
                     if route.get('ipCidrRouteType') == 3:
                         stop_flag = True
