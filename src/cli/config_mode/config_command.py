@@ -364,6 +364,14 @@ class FlowCommand(SDNCommand):
         self.flow['dst_port'] = self.flow['pending']['dst_port']
         self.flow['dst_wildcard'] = self.flow['pending']['dst_wildcard']
         self.flow['is_pending'] = False
+        self.flow['pending'] = {
+            'src_ip': 'any',
+            'src_port': None,
+            'src_wildcard': None,
+            'dst_ip': 'any',
+            'dst_port': None,
+            'dst_wildcard': None,
+        }
         self.topology.add_flow(self.flow)
 
         print("Apply flow success.")
@@ -372,23 +380,44 @@ class FlowCommand(SDNCommand):
         print('================== Flow name: {} =================='.format(self.flow['name']))
 
         print("Match: src ", end='')
-        if self.flow['src_wildcard'] is None:
-            print("host {}".format(self.flow['src_ip']), end='')
+        if self.flow['is_pending']:
+            if self.flow['pending']['src_wildcard'] is None:
+                print("host {}".format(self.flow['pending']['src_ip']), end='')
+            else:
+                print("{} {}".format(self.flow['pending']['src_ip'], self.flow['pending']['src_wildcard']), end='')
+            if self.flow['pending']['src_port'] is not None:
+                print(" port {}".format(self.flow['pending']['src_port']))
+            else:
+                print("")
         else:
-            print("{} {}".format(self.flow['src_ip'], self.flow['src_wildcard']), end='')
-        if self.flow['src_port'] is not None:
-            print(" port {}".format(self.flow['src_port']))
-        else:
-            print("")
+            if self.flow['src_wildcard'] is None:
+                print("host {}".format(self.flow['src_ip']), end='')
+            else:
+                print("{} {}".format(self.flow['src_ip'], self.flow['src_wildcard']), end='')
+            if self.flow['src_port'] is not None:
+                print(" port {}".format(self.flow['src_port']))
+            else:
+                print("")
+
         print("       dst ", end='')
-        if self.flow['dst_wildcard'] is None:
-            print("host {}".format(self.flow['dst_ip']), end='')
+        if self.flow['is_pending']:
+            if self.flow['pending']['dst_wildcard'] is None:
+                print("host {}".format(self.flow['pending']['dst_ip']), end='')
+            else:
+                print("{} {}".format(self.flow['pending']['dst_ip'], self.flow['pending']['dst_wildcard']), end='')
+            if self.flow['pending']['dst_port'] is not None:
+                print(" port {}".format(self.flow['pending']['dst_port']))
+            else:
+                print("")
         else:
-            print("{} {}".format(self.flow['dst_ip'], self.flow['dst_wildcard']), end='')
-        if self.flow['dst_port'] is not None:
-            print(" port {}".format(self.flow['dst_port']))
-        else:
-            print("")
+            if self.flow['dst_wildcard'] is None:
+                print("host {}".format(self.flow['dst_ip']), end='')
+            else:
+                print("{} {}".format(self.flow['dst_ip'], self.flow['dst_wildcard']), end='')
+            if self.flow['dst_port'] is not None:
+                print(" port {}".format(self.flow['dst_port']))
+            else:
+                print("")
 
         print("Current actions:", end='')
         for i, action in enumerate(self.flow['action']):
