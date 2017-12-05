@@ -490,6 +490,13 @@ class ConfigCommand(SDNCommand):
         # logging.info(flows)
         return [i['name'] for i in flows if i['name'].startswith(text)]
 
+    def do_debug(self, args):
+        try:
+            level = int(args)
+            self.logbug.log_level = level
+        except ValueError:
+            return
+
     def do_add(self, args):
         """ Using to add something
         """
