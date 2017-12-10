@@ -37,7 +37,7 @@ def cal_bw_usage_percent(octets, if_speed, in_time):
     # logging.debug("%s <--> %s :: %s", octets, if_speed, in_time)
     # return ((if_speed / ((octets * 8) / (in_time / 100))) * 100)
     in_time = in_time / 10
-    return ((octets * 8) / (in_time * if_speed))
+    return ((octets * 8 * 100) / (in_time * if_speed))
 
 def subnet_mask_to_wildcard_mask(subnet_mask):
     """ Convert subnet mask to wildcard mask
