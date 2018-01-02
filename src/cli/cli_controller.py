@@ -101,43 +101,8 @@ class CLIController(SDNCommand):
             pass
 
         src_network, src_mask, dst_network, dst_mask = args
-        mongo = get_connection()
-        # src_device = mongo.device.find_one({'interfaces.'})
-        src_route = mongo.route.find_one({
-                                    'ipCidrRouteType': 3,
-                                    'ipCidrRouteDest': src_network,
-                                    'ipCidrRouteMask': src_mask
-                                    })
-        if src_route is None:
-            print("Can't find source network {} {}".format(src_network, src_mask))
-            return
-        path = []
-        dest = mongo.route.find({
-            'ipCidrRouteDest': dst_network,
-            'ipCidrRouteMask': dst_mask
-        })
-        start_device_ip = src_route.get('device_ip')
 
-        stop_flag = False
-        for _ in range(dest.count()):
-            for route in dest.clone():
-                logging.debug("%s :: %s", route.get('device_ip'), start_device_ip)
-                if route.get('device_ip') == start_device_ip:
-                    path.append(route.get('device_ip'))
-                    # Stop
-                    if route.get('ipCidrRouteType') == 3:
-                        stop_flag = True
-                        break
-
-                    start_device = mongo.device.find_one({
-                        'interfaces.ipv4_address': route.get('ipCidrRouteNextHop')
-                    })
-                    start_device_ip = start_device.get('device_ip')
-                    # logging.info(start_device_ip)
-                    break
-
-            if stop_flag == True:
-                break
+        path = self.topology.get_path_by_subnet(src_network, src_mask, dst_network, dst_mask)
 
         print(" -> ".join(path))
 

@@ -468,6 +468,80 @@ class Topology:
             return reduce(f, paths)
         return paths
 
+    def get_path_by_subnet(self, src_network, src_mask, dst_network, dst_mask):
+        src_route = self.mongo.route.find_one({
+            'ipCidrRouteType': 3,
+            'ipCidrRouteDest': src_network,
+            'ipCidrRouteMask': src_mask
+        })
+        if src_route is None:
+            print("Can't find source network {} {}".format(src_network, src_mask))
+            return
+        path = []
+        dest = self.mongo.route.find({
+            'ipCidrRouteDest': dst_network,
+            'ipCidrRouteMask': dst_mask
+        })
+        start_device_ip = src_route.get('device_ip')
+
+        src_wildcard = sdn_utils.subnet_mask_to_wildcard_mask(src_mask)
+        dst_wildcard = sdn_utils.subnet_mask_to_wildcard_mask(dst_mask)
+
+        stop_flag = False
+        for _ in range(dest.count()):
+            for route in dest.clone():
+                logging.debug("%s :: %s", route.get('device_ip'), start_device_ip)
+                if route.get('device_ip') == start_device_ip:
+                    # Find route-map in flow_table
+                    route_map = self.mongo.find_one({
+                        "$or": [
+                            {
+                                'src_wildcard': src_wildcard,
+                            }
+                        ],
+                        '$or': [
+                            {
+                                'dst_wildcard': dst_wildcard,
+                            }
+                        ],
+                        'src_ip': src_network,
+                        'dst_ip': dst_network,
+                        'action.device_ip': ''
+                    })
+
+                    # TODO Check is in flow_table
+                    if route_map is not None:
+                        action = None
+                        for _action in route_map.action:
+                            if _action.device_ip == start_device_ip:
+                                action = _action
+
+                        if action.rule == 'exit-if':
+                            device = self.mongo.device.find_one({
+                                'device_ip': start_device_ip
+                            })
+                        elif action.rule == 'drop':
+                            path.append('DROP')
+                            stop_flag = True
+                            break
+
+                    path.append(route.get('device_ip'))
+                    # Stop
+                    if route.get('ipCidrRouteType') == 3:
+                        stop_flag = True
+                        break
+
+                    start_device = self.mongo.device.find_one({
+                        'interfaces.ipv4_address': route.get('ipCidrRouteNextHop')
+                    })
+                    start_device_ip = start_device.get('device_ip')
+                    # logging.info(start_device_ip)
+                    break
+
+            if stop_flag == True:
+                break
+        return path
+
     def create_graph(self):
         """ Create graph
         """
