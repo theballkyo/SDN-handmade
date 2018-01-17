@@ -168,12 +168,12 @@ class CLIController(SDNCommand):
         self.config_command.cmdloop("Enter to config mode")
 
     def do_exit(self, args):
-        self.logbug.pre_shutdown()
-        logging.debug("Shutdown...")
-        self.topology.shutdown()
-        time.sleep(0.5)
-        self.logbug.post_shutdown()
-        time.sleep(0.5)
+        # self.logbug.pre_shutdown()
+        # logging.debug("Shutdown...")
+        # self.topology.shutdown()
+        # time.sleep(0.5)
+        # self.logbug.post_shutdown()
+        # time.sleep(0.5)
         return True
 
     def handle_input(self):

@@ -41,14 +41,15 @@ def main():
     # Start CLI
     cli = CLIController()
     cli.init(topology, logbug, settings.app['version'])
-    try:
-        cli.cmdloop("Welcome to SDN Handmade. Type help to list commands.\n")
-    except KeyboardInterrupt:
-        logbug.pre_shutdown()
-        time.sleep(0.5)
-        topology.shutdown()
-        time.sleep(0.5)
-        logbug.post_shutdown()
+    
+    cli.cmdloop("Welcome to SDN Handmade. Type help to list commands.\n")
+
+    logbug.pre_shutdown()
+    time.sleep(0.5)
+    topology.shutdown()
+    rest_server.shutdown()
+    time.sleep(0.5)
+    logbug.post_shutdown()    
 
 
 if __name__ == '__main__':
