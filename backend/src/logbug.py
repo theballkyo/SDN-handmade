@@ -1,9 +1,15 @@
-import pprint
+# import pprint
 import logging
 import logging.handlers
 import struct
-import readline
+# import readline
 from datetime import datetime
+
+try:
+    import readline
+except ImportError:
+    import pyreadline as readline
+
 
 class LogBugHandler(logging.Handler):
 
@@ -15,10 +21,12 @@ class LogBugHandler(logging.Handler):
         """
         pass
 
+
 def debug(msg):
     """ Pretty print for debug
     """
     pprint.pprint(msg)
+
 
 class LogBug:
 
@@ -27,7 +35,7 @@ class LogBug:
         self.prompt = ''
         self.is_wait_input = False
         self.shutdown = False
-        self.log_level = 20
+        self.log_level = 0
         # self.sys = sys
 
     def pre_shutdown(self):
@@ -50,12 +58,11 @@ class LogBug:
         root = logging.getLogger()
         root.addHandler(h)
         root.setLevel(logging.DEBUG)
-        print("Worker config")
 
     def listener_thread(self):
         self.listener_configurer()
-        import fcntl
-        import termios
+        # import fcntl
+        # import termios
         import sys
         while True:
             try:
@@ -73,15 +80,17 @@ class LogBug:
                 # # logger = logging.getLogger(record.name)
                 buff = readline.get_line_buffer()
                 # print("Buff2: " + str(len(buff)))
-                _, cols = struct.unpack('hh', fcntl.ioctl(sys.stdout, termios.TIOCGWINSZ, '1234'))
+                # _, cols = struct.unpack('hh', fcntl.ioctl(sys.stdout, termios.TIOCGWINSZ, '1234'))
                 # # print(readline.get_)
                 text_len = len(buff) + 2
                 text_len += len(self.prompt)
                 #
                 # ANSI escape sequences (All VT100 except ESC[0G)
-                sys.stdout.write('\x1b[2K')                          # Clear current line
+                # Clear current line
+                sys.stdout.write('\x1b[2K')
                 # sys.stdout.write('\x1b[1A\x1b[2K'*(text_len//cols))  # Move cursor up and clear line
-                sys.stdout.write('\x1b[1000D')                          # Move to start of line
+                # Move to start of line
+                sys.stdout.write('\x1b[1000D')
                 # print(record.__dict__)
 
                 data = {
@@ -90,7 +99,8 @@ class LogBug:
                     'levelname': record.levelname,
                     'message': record.message
                 }
-                sys.stdout.write("{created} [{levelname}({levelno})] {message}\n".format(**data))
+                sys.stdout.write(
+                    "{created} [{levelname}({levelno})] {message}\n".format(**data))
                 # sys.stdout.write(record)
                 if self.is_wait_input:
                     sys.stdout.write(self.prompt + buff)
@@ -101,7 +111,8 @@ class LogBug:
             except EOFError:
                 break
             except:
-                import sys, traceback
+                import sys
+                import traceback
                 # print >> sys.stderr, 'Whoops! Problem:'
                 traceback.print_exc(file=sys.stderr)
 

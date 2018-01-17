@@ -1,17 +1,60 @@
 """ SDN Handmade for legacy cisco device """
-import multiprocessing
 import logging
+import multiprocessing as mp
+
+import threading
 import time
-# import threading
-from snmp.snmp_worker import device
+import os
+import logbug as lb
+import sdn_handmade as sdn
+from cli.cli_controller import CLIController
+import settings
+from api.rest_server import RestServer
 
 
 def main():
-    """ test
+    """ Run SDN Controller Server
     """
-    print(device)
+    queue = mp.Queue()
+
+    logbug = lb.LogBug(queue)
+    # Start listener_thread
+    threading.Thread(target=logbug.listener_thread, daemon=True).start()
+
+    logbug.worker_config()
+
+    # Create topology
+    topology = sdn.Topology(
+        netflow_ip=settings.netflow['bind_ip'],
+        netflow_port=settings.netflow['bind_port']
+    )
+
+    # Start topoloygy loop
+    topology.run()
+
+    # Start REST API Server
+    # Todo change from thread to multiprocessing
+    # mp.Process(target=rest_server.__run__, daemon=True).start()
+    rest_server = RestServer()
+    rest_server.run()
+
+    # Start CLI
+    cli = CLIController()
+    cli.init(topology, logbug, settings.app['version'])
+    try:
+        cli.cmdloop("Welcome to SDN Handmade. Type help to list commands.\n")
+    except KeyboardInterrupt:
+        logbug.pre_shutdown()
+        time.sleep(0.5)
+        topology.shutdown()
+        time.sleep(0.5)
+        logbug.post_shutdown()
+
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.WARNING)
-    logging.debug('Starting')
+    # FORMAT = '%(asctime)-15s - %(name)s - %(message)s'
+    # logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
+    #                     format=FORMAT)
+    if os.name == 'nt':
+        print("Warning: Windows is not fully support.")
     main()

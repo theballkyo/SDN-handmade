@@ -2,7 +2,9 @@ from cli.sdn_cmd import SDNCommand
 import logging
 import ipaddress
 import sdn_utils
-
+import services
+# from services.device_service import DeviceService
+from sdn_handmade import Device
 
 class AddDeviceCommand():
     def __init__(self, topology, logbug):
@@ -113,8 +115,20 @@ class AddDeviceCommand():
             logging.debug("SSH info %s", ssh_info)
             logging.debug("SNMP info %s", snmp_info)
 
-            device = self.topology.create_device_object(device_info, ssh_info, snmp_info)
-            self.topology.add_device(device)
+            # device = self.topology.create_device_object(device_info, ssh_info, snmp_info)
+            # self.topology.add_device(device)
+            device_service = services.DeviceService()
+            device_service.add_device({
+                'management_ip': device_info['ip'],
+                'status': Device.STATUS_OFFLINE,
+                'type': device_info['type'],
+                'ssh_info': ssh_info,
+                'snmp_info': snmp_info,
+                # Todo
+                'netflow_src': {
+                    'ip': '0.0.0.0'
+                }
+            })
 
             # Clear prompt
             self.logbug.prompt = ''
@@ -460,24 +474,29 @@ class ConfigCommand(SDNCommand):
         self.logbug = logbug
         self.prompt = 'SDN Handmade (0.0.1)(config)# '
         self.add_device = AddDeviceCommand(topology, logbug)
+        self.device_service = services.DeviceService()
 
     def do_remove(self, args):
         args = args.split(' ')
         if args[0] == 'device':
             if len(args) < 2:
-                print("Usage remove device {device ip}")
+                print("Usage remove device {Management ip}")
             else:
                 try:
                     ip = ipaddress.ip_address(args[1])
                     if ip.version != 4:
                         print("Device IP must be IPv4")
                         return
-                    if self.topology.remove_device(args[1]):
-                        print("Removed device IP {}".format(args[1]))
-                    else:
-                        print('Can\'t find device IP {}'.format(args[1]))
+                    self.device_service.remove(args[1])
+                    # if self.topology.remove_device(args[1]):
+                    print("Removed device IP {}".format(args[1]))
+                    # else:
+                    #     print('Can\'t find device IP {}'.format(args[1]))
                 except ValueError:
                     print("Device IP format not correct")
+    
+    def complete_remove(self, text, line, begidx, endidx):
+        return ['device']
 
     def do_flow(self, args):
         if args == '':

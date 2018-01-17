@@ -1,16 +1,20 @@
 import logging
 import time
 import ipaddress
-from .sdn_cmd import SDNCommand
-from .topology_command import TopologyCommand
-from .device_command import DeviceCommand
-from .show_command import ShowCommand
-from .config_mode.config_command import ConfigCommand
-from database import get_connection
+import networkx as nx
+import matplotlib.pyplot as plt
+
+from cli.sdn_cmd import SDNCommand
+from cli.topology_command import TopologyCommand
+from cli.device_command import DeviceCommand
+from cli.show_command import ShowCommand
+from cli.config_mode.config_command import ConfigCommand
+
 
 class CLIController(SDNCommand):
 
-    _COMPLETE_SHOW = ('device', 'flow', 'topology', 'graph', 'version', 'route')
+    _COMPLETE_SHOW = ('device', 'flow', 'topology',
+                      'graph', 'version', 'route')
 
     def init(self, topology, logbug, version):
         self.topology = topology
@@ -64,7 +68,15 @@ class CLIController(SDNCommand):
         elif args[0] == 'route':
             return self.show_route(args[1:])
         elif args[0] == 'graph':
-            print(self.topology.create_graph())
+            G = self.topology.create_graph()
+            # edge_labels = nx.get_edge_attributes(G,'state')
+            nx.draw_networkx_edge_labels(G, pos=nx.spring_layout(G))
+            # nx.draw_networkx_edge_labels(G, pos, labels = edge_labels)
+            plt.rcParams["figure.figsize"] = [30, 30]
+            nx.draw_circular(G, with_labels=True)
+            filename = "imgs/topo-{}.png".format(time.time())
+            plt.savefig(filename)
+            plt.show(block=False)
         elif args[0] == 'topology':
             self.topology.print_matrix()
         elif args[0] == 'version':
@@ -80,7 +92,8 @@ class CLIController(SDNCommand):
                 return []
             else:
                 device_ip = _text[2]
-            device_list = [i.ip for i in self.topology.devices if i.ip.startswith(device_ip)]
+            device_list = [
+                i.ip for i in self.topology.devices if i.ip.startswith(device_ip)]
             if device_ip in device_list:
                 return [i for i in ('route', 'interface') if i.startswith(_text[3])]
             logging.debug(device_list)
@@ -93,7 +106,8 @@ class CLIController(SDNCommand):
         # Check argument
         # args = args.split(' ')
         if len(args) != 4:
-            print("Usage: show route {host <source addr> | <source network> <source mask>} {host <destination addr> | <destination network> <destination mask>}")
+            print(
+                "Usage: show route {host <source addr> | <source network> <source mask>} {host <destination addr> | <destination network> <destination mask>}")
             return
 
         # Todo implement find by host
@@ -102,7 +116,8 @@ class CLIController(SDNCommand):
 
         src_network, src_mask, dst_network, dst_mask = args
 
-        path = self.topology.get_path_by_subnet(src_network, src_mask, dst_network, dst_mask)
+        path = self.topology.get_path_by_subnet(
+            src_network, src_mask, dst_network, dst_mask)
 
         print(" -> ".join(path))
 
@@ -133,7 +148,8 @@ class CLIController(SDNCommand):
             if_name = interfaces[if_index]['description']
             ip_addr = ipaddress.ip_network("{}/{}".format(dest, mask))
 
-            print("[R]({}) {:21} -> {:21}(IF - {})".format(type, str(ip_addr), next_hop, if_name))
+            print("[R]({}) {:21} -> {:21}(IF - {})".format(type,
+                                                           str(ip_addr), next_hop, if_name))
 
     def do_device(self, args):
         """
@@ -150,7 +166,6 @@ class CLIController(SDNCommand):
         :return:
         """
         self.config_command.cmdloop("Enter to config mode")
-
 
     def do_exit(self, args):
         self.logbug.pre_shutdown()

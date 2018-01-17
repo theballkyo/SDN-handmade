@@ -1,7 +1,8 @@
 """ Database management """
 import pymongo
-from config import MONGO_DB
+# from config.database import MONGO_DB
 import os
+import settings
 
 DEFAULT_CONNECTION_NAME = 'default'
 
@@ -9,11 +10,18 @@ _connections = {}
 
 
 def get_connection(alias=DEFAULT_CONNECTION_NAME):
-    # Todo
+   # Todo
+    alias_original = alias
     alias = alias + str(os.getpid())
     if alias not in _connections:
-        _connections[alias] = MongoDB()
-
+        # Check mongo configuration
+        config = settings.database.get(alias_original)
+        if config is not None:
+            if config.get('driver', '') != 'mongo':
+                raise ValueError("config driver is not mongo")
+            _connections[alias] = MongoDB(config['uri'], config['database'])
+        else:
+            raise ValueError("Can't find config alias name %s" % alias)
     return _connections[alias]
 
 
@@ -23,12 +31,13 @@ def disconnect(alias=DEFAULT_CONNECTION_NAME):
         _connections[alias].client.close()
         del _connections[alias]
 
+
 class MongoDB:
-    def __init__(self):
-        self.client = pymongo.MongoClient(MONGO_DB.get('host'))
+    def __init__(self, uri, database):
+        self.client = pymongo.MongoClient(uri)
         self.pymongo = pymongo
         # Defind Database
-        self.db = self.client.sdn_test2
+        self.db = self.client[database]
 
         # Defind Collection
         self.netflow = self.db.netflow
@@ -44,11 +53,4 @@ class MongoDB:
         # Flow sequence
         self.flow_seq = self.db.flow_seq
 
-
-# class NetflowDB(MongoDB):
-#
-#     # def __init__(self, netflow):
-#     #     self.netflow = netflow
-#
-#     def insert(self, data):
-#         self.netflow.insert_one(data)
+        self.app = self.db.app

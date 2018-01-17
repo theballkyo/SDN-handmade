@@ -3,12 +3,71 @@ import ipcalc
 import logging
 from graphs import Graph
 from database import get_connection
-
+import services
+import networkx as nx
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+from PIL import Image
+import time
 
 class Neighbor:
     def __init__(self, interface, neighbor_ip):
         self.neighbor_ip = neighbor_ip
         self.interface = interface
+
+def create_networkx_graph(devices):
+    """ Create graph than using NetworkX libraly
+    """
+    num_device = devices.count()
+    networkx = nx.Graph()
+    
+    cdp_service = services.CdpService()
+    device_service = services.DeviceService()
+
+    for src_device in devices:
+        cdp = cdp_service.get_by_mangement_ip(src_device['management_ip'])
+
+        if cdp is not None:
+            cdp_neighbor = cdp.get('neighbor')
+            for neighbor in cdp_neighbor:
+                neighbor_device = device_service.find_by_if_ip(neighbor.get('ip_addr'))
+                if neighbor_device is None:
+                    logging.debug('1: none')
+                    continue
+                if_index = -1
+                for neighbor_interface in neighbor_device.get('interfaces'):
+                    # Default is -1, -2 because if no IP is not match
+                    if neighbor_interface.get('ipv4_address', -1) == neighbor.get('ip_addr', -2):
+                        if_index = neighbor_interface['index']
+                        break
+                
+                # Don't have neighbor
+                if if_index == -1:
+                    logging.debug('2: none')
+                    continue
+
+                print("Added edge: " + src_device['management_ip'] + " - " + neighbor_device['management_ip'])
+                networkx.add_edge(
+                    src_device['management_ip'],
+                    neighbor_device['management_ip'],
+                    src=src_device['management_ip'],
+                    dst=neighbor_device['management_ip'],
+                    dst_ip=neighbor['ip_addr'],
+                    dst_port=neighbor['port']
+                )
+
+                # neighbor_info = {
+                #     "neighbor_ip": neighbor['ip_addr'],
+                #     # "neighbor_if_index": n4,
+                #     "neighbor_obj": neighbor_device,
+                #     "ip": devices[n1].ip,
+                #     "if_index": if_index,
+                #     "port": neighbor['port']
+                # }
+        else:
+            # TODO
+            pass
+    return networkx
 
 
 def create_graph(devices):

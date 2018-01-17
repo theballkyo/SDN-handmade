@@ -61,7 +61,7 @@ class SNMPWorker(multiprocessing.Process):
         except ValueError:
             pass
 
-    async def get_and_store(self, device):
+    async def get_and_store(self, device, active_device):
         """ Get snmp infomation and add to database
         """
         mongo = get_connection()
@@ -199,12 +199,16 @@ class SNMPWorker(multiprocessing.Process):
 
         device.fork()
 
+        db = get_connection()
+
+        active_device = db.device_config.find({'active': True})
+
         while 1:
             logging.debug("SNMP Worker: Start loop device IP %s", device.ip)
             start = time.time()
 
             loop.run_until_complete(
-                self.get_and_store(device)
+                self.get_and_store(device, active_device)
             )
 
             # logging.debug("Process took: {:.2f} seconds".format(time.time() - start))

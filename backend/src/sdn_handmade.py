@@ -7,6 +7,9 @@ from functools import reduce
 import gen_nb
 import gen_subnet
 import logbug
+import services
+# import services.device_service.DeviceService
+# from services.device_service import DeviceService
 from database import get_connection
 from netflow import NetflowWorker
 from netmiko import ConnectHandler
@@ -339,6 +342,7 @@ class Topology:
         self.__create_time = time.time()
         self.devices = []
         self.subnets = []
+        self.app_service = services.AppService()
 
         self._snmp_worker = SNMPWorker()
 
@@ -350,6 +354,8 @@ class Topology:
         self.mongo = get_connection()
 
         self.init()
+
+        self.device_service = services.DeviceService()
         # self.graph, self.matrix = self.create_graph()
         logging.info("Create topology")
 
@@ -367,12 +373,15 @@ class Topology:
     def run(self):
         """ Start topoloygy loop
         """
-        self._netflow_worker.start()
-        self._snmp_worker.run()
+        if not self.app_service.is_running():
+            self._netflow_worker.start()
+            self._snmp_worker.run()
+            self.app_service.set_running(True)
 
     def shutdown(self):
         """ Shutdown topology
         """
+        self.app_service.set_running(False)
         self._snmp_worker.shutdown()
         self._netflow_worker.shutdown()
         self._netflow_worker.join()
@@ -545,7 +554,8 @@ class Topology:
     def create_graph(self):
         """ Create graph
         """
-        return gen_nb.create_graph(self.devices)
+        devices = self.device_service.get_active()
+        return gen_nb.create_networkx_graph(devices)
         # return get_neighbor()
 
     def create_subnet(self):
@@ -579,12 +589,14 @@ class Topology:
             self.__add_device(devices)
 
     def remove_device(self, device_ip):
-        for device in self.devices:
-            if device.ip == device_ip:
-                self._snmp_worker.remove_device(device)
-                self.devices.remove(device)
-                return True
-        return False
+        # Todo fix
+        pass
+        # for device in self.devices:
+        #     if device.ip == device_ip:
+        #         self._snmp_worker.remove_device(device)
+        #         self.devices.remove(device)
+        #         return True
+        # return False
 
     def add_flow(self, flow):
         """ Add flow
@@ -670,18 +682,18 @@ class Topology:
             logging.info("device argument is not instance of Device")
             return
         self.devices.append(device)
-        self.mongo.device_config.update_one({
-            'ip': device.ip,
-        }, {
-            '$set': {
-                'ip': device.ip,
-                'type': device.type,
-                'ssh_info': device.ssh_info,
-                'snmp_info': device.snmp_info
+
+        self.device_service.add_device({
+            'management_ip': device.ip,
+            'status': Device.STATUS_OFFLINE,
+            'type': device.type,
+            'ssh_info': device.ssh_info,
+            'snmp_info': device.snmp_info,
+            # Todo
+            'netflow_src': {
+                'ip': '0.0.0.0'
             }
-        }, upsert=True)
-        # Add to snmp worker
-        self._snmp_worker.add_device(device, run=True)
+        })
 
 class Flow:
     def __init__(self, flow_name):
