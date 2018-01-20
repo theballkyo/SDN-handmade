@@ -5,7 +5,7 @@ import queue
 import time
 
 import sdn_utils
-from database import get_connection, disconnect
+from database import get_mongodb, disconnect
 from snmp_async import (get_cdp, get_interfaces, get_ip_addr, get_lldp,
                         get_routes, get_system_info)
 
@@ -64,7 +64,7 @@ class SNMPWorker(multiprocessing.Process):
     async def get_and_store(self, device, active_device):
         """ Get snmp infomation and add to database
         """
-        mongo = get_connection()
+        mongo = get_mongodb()
         # Status = Working...
         device.set_status(device.STATUS_SNMP_WORKING)
 
@@ -199,7 +199,7 @@ class SNMPWorker(multiprocessing.Process):
 
         device.fork()
 
-        db = get_connection()
+        db = get_mongodb()
 
         active_device = db.device_config.find({'active': True})
 

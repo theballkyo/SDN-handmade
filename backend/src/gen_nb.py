@@ -2,7 +2,7 @@ import copy
 import ipcalc
 import logging
 from graphs import Graph
-from database import get_connection
+from database import get_mongodb
 import services
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -77,7 +77,7 @@ def create_graph(devices):
 
     matrix = []
     graph = {}
-    conn = get_connection()
+    conn = get_mongodb()
     for n1 in range(num_device):
         # Resetting neighbor
         devices[n1].neighbor = []

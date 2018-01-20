@@ -2,24 +2,24 @@
 import pymongo
 # from config.database import MONGO_DB
 import os
-import settings
+import config
 
 DEFAULT_CONNECTION_NAME = 'default'
 
 _connections = {}
 
 
-def get_connection(alias=DEFAULT_CONNECTION_NAME):
-   # Todo
+def get_mongodb(alias=DEFAULT_CONNECTION_NAME):
     alias_original = alias
     alias = alias + str(os.getpid())
     if alias not in _connections:
-        # Check mongo configuration
-        config = settings.database.get(alias_original)
+        # Check mongodb configuration
+        config = config.database.get(alias_original)
         if config is not None:
-            if config.get('driver', '') != 'mongo':
-                raise ValueError("config driver is not mongo")
-            _connections[alias] = MongoDB(config['uri'], config['database'])
+            if config.get('driver', '') != 'mongodb':
+                raise ValueError("config driver is not mongodb")
+            max_pool_size = config.get('max_pool_size', 10)
+            _connections[alias] = MongoDB(config['uri'], config['database'], max_pool_size)
         else:
             raise ValueError("Can't find config alias name %s" % alias)
     return _connections[alias]
@@ -33,13 +33,13 @@ def disconnect(alias=DEFAULT_CONNECTION_NAME):
 
 
 class MongoDB:
-    def __init__(self, uri, database):
-        self.client = pymongo.MongoClient(uri)
+    def __init__(self, uri, database, max_pool_size=10):
+        self.client = pymongo.MongoClient(uri, maxPoolSize=max_pool_size)
         self.pymongo = pymongo
-        # Defind Database
+        # Define Database
         self.db = self.client[database]
 
-        # Defind Collection
+        # Define Collection
         self.netflow = self.db.netflow
         self.snmp = self.db.snmp
         self.device = self.db.device

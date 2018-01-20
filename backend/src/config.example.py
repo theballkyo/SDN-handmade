@@ -1,10 +1,11 @@
 database = {
     'default': {
-        'driver': 'mongo', # Currently support only mongo
+        'driver': 'mongodb',  # Currently support only mongo
         # 'username': '',
         # 'password': '',
         'uri': 'mongodb://localhost:27017/',
-        'database': 'sdn_test'
+        'database': 'sdn_test',
+        'max_pool_size': 50,
     }
 }
 

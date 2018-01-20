@@ -4,19 +4,20 @@ import logging
 import time
 from functools import reduce
 
+from netmiko import ConnectHandler
+from netmiko.ssh_exception import NetMikoTimeoutException
+from helpers.path import FindPath
+
 import gen_nb
 import gen_subnet
-import logbug
+import sdn_utils
 import services
 # import services.device_service.DeviceService
 # from services.device_service import DeviceService
-from database import get_connection
+from database import get_mongodb
 from netflow import NetflowWorker
-from netmiko import ConnectHandler
-from netmiko.ssh_exception import NetMikoTimeoutException
 from snmp_worker import SNMPWorker
-import sdn_utils
-from pymongo import UpdateOne
+
 
 class Route:
     def __init__(self):
@@ -57,10 +58,10 @@ class Device:
         self.route = []
         self.subnets = {}
 
-        self.mongo = get_connection()
+        self.mongo = get_mongodb()
 
     def fork(self):
-        self.mongo = get_connection()
+        self.mongo = get_mongodb()
 
     def update_info(self):
         self.mongo.device.update_one({
@@ -172,7 +173,7 @@ class Device:
         _time = self.query('uptime')
         if not _time:
             return "Down"
-        return sdn_utils.millis_to_datetime(_time*10)
+        return sdn_utils.millis_to_datetime(_time * 10)
 
     def infomation_text(self):
         """ Display device infomation
@@ -194,6 +195,7 @@ class Device:
 class Router(Device):
     """ Device is a Router
     """
+
     def __init__(self, device_info, ssh_info, snmp_info):
         super(Router, self).__init__(device_info, ssh_info, snmp_info)
         self.type = 'router'
@@ -202,6 +204,7 @@ class Router(Device):
 class CiscoRouter(Router):
     """ Device is a Cisco Router
     """
+
     def __init__(self, device_info, ssh_info, snmp_info):
         super(CiscoRouter, self).__init__(device_info, ssh_info, snmp_info)
 
@@ -217,7 +220,6 @@ class CiscoRouter(Router):
         self.ssh_info['device_type'] = 'cisco_ios'
 
         self.net_connect = ConnectHandler(**ssh_info)
-
 
     def remote_command(self, command):
         """ Connect SSH to device
@@ -297,7 +299,6 @@ class CiscoRouter(Router):
         # Apply interface policy
         # Todo
 
-
         # Grouping commands
         command = sdn_utils.generate_flow_command(flow, my_action, current_action)
         logging.info(command)
@@ -309,7 +310,6 @@ class CiscoRouter(Router):
         """ Get device serial Number
         """
         return self.remote_command("show version | inc Processor board ID")
-
 
     def get_route_map(self):
         """ Get current route map on device
@@ -351,7 +351,9 @@ class Topology:
             netflow_port
         )
 
-        self.mongo = get_connection()
+        # self.path = FindPath()
+
+        self.mongo = get_mongodb()
 
         self.init()
 
@@ -397,7 +399,7 @@ class Topology:
         """ Find a path between 2 devices
         """
         if not isinstance(from_device, Device) or \
-            not isinstance(to_device, Device):
+                not isinstance(to_device, Device):
             print("Error: from_device or to_device is not instance of Device")
             return None
 
@@ -418,7 +420,7 @@ class Topology:
                 path__ = []
                 for i in range(len(path) - 1):
                     device = path[i]
-                    neighbor = device.find_neighbor(path[i+1])
+                    neighbor = device.find_neighbor(path[i + 1])
                     path__.append({
                         "from_device": device,
                         "to_device": neighbor['neighbor_obj'],
@@ -430,7 +432,7 @@ class Topology:
         else:
             for i in range(len(paths) - 1):
                 device = paths[i]
-                neighbor = device.find_neighbor(paths[i+1])
+                neighbor = device.find_neighbor(paths[i + 1])
                 new_path.append({
                     "from_device": device,
                     "to_device": neighbor['neighbor_obj'],
@@ -487,7 +489,7 @@ class Topology:
             print("Can't find source network {} {}".format(src_network, src_mask))
             return
         path = []
-        dest = self.mongo.route.find({
+        dst_route = self.mongo.route.find({
             'ipCidrRouteDest': dst_network,
             'ipCidrRouteMask': dst_mask
         })
@@ -497,8 +499,8 @@ class Topology:
         dst_wildcard = sdn_utils.subnet_mask_to_wildcard_mask(dst_mask)
 
         stop_flag = False
-        for _ in range(dest.count()):
-            for route in dest.clone():
+        for _ in range(dst_route.count()):
+            for route in dst_route.clone():
                 logging.debug("%s :: %s", route.get('device_ip'), start_device_ip)
                 if route.get('device_ip') == start_device_ip:
                     # Find route-map in flow_table
@@ -547,9 +549,12 @@ class Topology:
                     # logging.info(start_device_ip)
                     break
 
-            if stop_flag == True:
+            if stop_flag:
                 break
         return path
+
+    def update_graph(self):
+        self.path.update_graph(self.create_graph())
 
     def create_graph(self):
         """ Create graph
@@ -642,7 +647,6 @@ class Topology:
                 # remove flow
                 pass
 
-
     def get_flow(self, name):
         return self.mongo.flow_table.find_one({'name': name})
 
@@ -676,7 +680,6 @@ class Topology:
         for device in self.devices:
             print("\t > {}".format(device))
 
-
     def __add_device(self, device):
         if not isinstance(device, Device):
             logging.info("device argument is not instance of Device")
@@ -695,7 +698,8 @@ class Topology:
             }
         })
 
+
 class Flow:
     def __init__(self, flow_name):
-        mongo = get_connection()
+        mongo = get_mongodb()
         flow = mongo.flow_table.find_one({'name': flow_name})

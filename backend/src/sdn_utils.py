@@ -2,7 +2,7 @@ import datetime
 import struct
 import socket
 import logging
-from database import get_connection
+from database import get_mongodb
 import sdn_handmade
 
 def hex_to_string(str_hex):

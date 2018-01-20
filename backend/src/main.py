@@ -1,5 +1,4 @@
 """ SDN Handmade for legacy cisco device """
-import logging
 import multiprocessing as mp
 
 import threading
@@ -8,7 +7,7 @@ import os
 import logbug as lb
 import sdn_handmade as sdn
 from cli.cli_controller import CLIController
-import settings
+import config
 from api.rest_server import RestServer
 
 
@@ -17,19 +16,19 @@ def main():
     """
     queue = mp.Queue()
 
-    logbug = lb.LogBug(queue)
+    log_bug = lb.LogBug(queue)
     # Start listener_thread
-    threading.Thread(target=logbug.listener_thread, daemon=True).start()
+    threading.Thread(target=log_bug.listener_thread, daemon=True).start()
 
-    logbug.worker_config()
+    log_bug.worker_config()
 
     # Create topology
     topology = sdn.Topology(
-        netflow_ip=settings.netflow['bind_ip'],
-        netflow_port=settings.netflow['bind_port']
+        netflow_ip=config.netflow['bind_ip'],
+        netflow_port=config.netflow['bind_port']
     )
 
-    # Start topoloygy loop
+    # Start topology loop
     topology.run()
 
     # Start REST API Server
@@ -40,16 +39,16 @@ def main():
 
     # Start CLI
     cli = CLIController()
-    cli.init(topology, logbug, settings.app['version'])
-    
+    cli.init(topology, log_bug, config.app['version'])
+
     cli.cmdloop("Welcome to SDN Handmade. Type help to list commands.\n")
 
-    logbug.pre_shutdown()
+    log_bug.pre_shutdown()
     time.sleep(0.5)
     topology.shutdown()
     rest_server.shutdown()
     time.sleep(0.5)
-    logbug.post_shutdown()    
+    log_bug.post_shutdown()
 
 
 if __name__ == '__main__':

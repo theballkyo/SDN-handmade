@@ -233,22 +233,22 @@ async def get_routes(host, community, port=161):
     )
 
     mibs = [
-        'ipCidrRouteDest',
-        'ipCidrRouteMask',
-        'ipCidrRouteTos',
-        'ipCidrRouteNextHop',
-        'ipCidrRouteIfIndex',
-        'ipCidrRouteType',
-        'ipCidrRouteProto',
-        'ipCidrRouteAge',
-        'ipCidrRouteInfo',
-        'ipCidrRouteNextHopAS',
-        'ipCidrRouteMetric1',
-        'ipCidrRouteMetric2',
-        'ipCidrRouteMetric3',
-        'ipCidrRouteMetric4',
-        'ipCidrRouteMetric5',
-        'ipCidrRouteStatus'
+        'dest',
+        'mask',
+        'tos',
+        'next_hop',
+        'if_index',
+        'type',
+        'proto',
+        'age',
+        'info',
+        'next_hop_AS',
+        'metric1',
+        'metric2',
+        'metric3',
+        'metric4',
+        'metric5',
+        'status'
     ]
 
     return await get(host, community, object_types, mibs=mibs)

@@ -5,7 +5,7 @@ import socketserver
 import threading
 import time
 
-from database import get_connection
+from database import get_mongodb
 from netflow_packet import ExportPacket
 
 
@@ -19,7 +19,7 @@ class NetflowWorker(threading.Thread):
         self.stop_flag = False
         self.device = []
         self.daemon = True
-        self.mongo = get_connection()
+        self.mongo = get_mongodb()
 
     def run(self):
         """ Create netflow Server

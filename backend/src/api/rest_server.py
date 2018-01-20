@@ -1,6 +1,6 @@
 from flask import Flask, request
 import multiprocessing as mp
-import settings
+import config
 
 class RestServer:
     app = Flask(__name__)
@@ -16,7 +16,7 @@ class RestServer:
         self.server = mp.Process(target=self._run, daemon=True).start()
     
     def _run(self):
-        self.app.run(host=settings.rest_api['host'], port=settings.rest_api['port'])
+        self.app.run(host=config.rest_api['host'], port=config.rest_api['port'])
 
     def shutdown(self):
         if self.server:
