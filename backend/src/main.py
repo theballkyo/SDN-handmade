@@ -7,7 +7,7 @@ import os
 import logbug as lb
 import sdn_handmade as sdn
 from cli.cli_controller import CLIController
-import config
+import settings
 from api.rest_server import RestServer
 
 
@@ -24,8 +24,8 @@ def main():
 
     # Create topology
     topology = sdn.Topology(
-        netflow_ip=config.netflow['bind_ip'],
-        netflow_port=config.netflow['bind_port']
+        netflow_ip=settings.netflow['bind_ip'],
+        netflow_port=settings.netflow['bind_port']
     )
 
     # Start topology loop
@@ -39,7 +39,7 @@ def main():
 
     # Start CLI
     cli = CLIController()
-    cli.init(topology, log_bug, config.app['version'])
+    cli.init(topology, log_bug, settings.app['version'])
 
     cli.cmdloop("Welcome to SDN Handmade. Type help to list commands.\n")
 

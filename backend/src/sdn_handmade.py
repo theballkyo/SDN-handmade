@@ -6,7 +6,7 @@ from functools import reduce
 
 from netmiko import ConnectHandler
 from netmiko.ssh_exception import NetMikoTimeoutException
-from helpers.path import FindPath
+from helpers.path import PathFinder
 
 import gen_nb
 import gen_subnet

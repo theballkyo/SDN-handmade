@@ -13,6 +13,7 @@ from pyasn1.type.univ import Null
 import pysnmp.proto.errind as errind
 from snmp_type import IF_TYPE
 
+
 def to_value(rfc1902_object):
     """Convert rfc1902_object to value
     """
@@ -22,16 +23,16 @@ def to_value(rfc1902_object):
     #     return str(rfc1902_object)
     # print(type(rfc1902_object))
     if isinstance(rfc1902_object, Counter64) or \
-        isinstance(rfc1902_object, Counter32) or \
-        isinstance(rfc1902_object, Integer) or \
-        isinstance(rfc1902_object, Integer32) or \
-        isinstance(rfc1902_object, Gauge32) or \
-        isinstance(rfc1902_object, Unsigned32) or \
-        isinstance(rfc1902_object, TimeTicks):
-
+            isinstance(rfc1902_object, Counter32) or \
+            isinstance(rfc1902_object, Integer) or \
+            isinstance(rfc1902_object, Integer32) or \
+            isinstance(rfc1902_object, Gauge32) or \
+            isinstance(rfc1902_object, Unsigned32) or \
+            isinstance(rfc1902_object, TimeTicks):
         return int(rfc1902_object)
 
     return rfc1902_object.prettyPrint()
+
 
 async def get(host, community, varBinds, max_repetitions=16, port=161, mibs=None):
     # print(host + ' >>> Running...')
@@ -129,7 +130,6 @@ async def get(host, community, varBinds, max_repetitions=16, port=161, mibs=None
             if not stopFlag:
                 varBinds = varBindTable[-1]
 
-
     # sleep_time = random.random()
     # print(host + ' >>> Ending...')
     # await asyncio.sleep(sleep_time)
@@ -138,6 +138,7 @@ async def get(host, community, varBinds, max_repetitions=16, port=161, mibs=None
     # return 1
     snmpEngine.transportDispatcher.closeDispatcher()
     return data
+
 
 async def get_interfaces(host, community, port=161, oid='.1.3.6.1.2.1.2.1.0'):
     '''Get interfaces infomation
@@ -154,17 +155,17 @@ async def get_interfaces(host, community, port=161, oid='.1.3.6.1.2.1.2.1.0'):
         ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.9')),
         ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.10')),
         ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.11')),
-     #    ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.12')),
+        #    ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.12')),
         ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.13')),
         ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.14')),
         ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.15')),
         ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.16')),
         ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.17')),
-     #    ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.18')),
+        #    ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.18')),
         ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.19')),
         ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.20')),
-     #    ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.21')),
-     #    ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.22')),
+        #    ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.21')),
+        #    ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.22')),
     )
 
     mibs = [
@@ -276,10 +277,12 @@ async def get_system_info(host, community, port=161):
     data['description'] = sdn_utils.hex_to_string(data['description'])
     return data
 
+
 async def get_cdp(host, community, port=161):
     """ Get CDP
     """
-
+    # Todo add local interface
+    # More detail: http://www.oidview.com/mibs/9/CISCO-CDP-MIB.html
     object_types = (
         ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.4')),
         ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.5')),

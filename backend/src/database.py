@@ -2,7 +2,7 @@
 import pymongo
 # from config.database import MONGO_DB
 import os
-import config
+import settings
 
 DEFAULT_CONNECTION_NAME = 'default'
 
@@ -14,7 +14,7 @@ def get_mongodb(alias=DEFAULT_CONNECTION_NAME):
     alias = alias + str(os.getpid())
     if alias not in _connections:
         # Check mongodb configuration
-        config = config.database.get(alias_original)
+        config = settings.database.get(alias_original)
         if config is not None:
             if config.get('driver', '') != 'mongodb':
                 raise ValueError("config driver is not mongodb")

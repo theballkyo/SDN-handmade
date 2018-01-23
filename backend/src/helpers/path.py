@@ -7,7 +7,7 @@ from PIL import Image
 import time
 
 
-class FindPath:
+class PathFinder:
     def __init__(self, auto_update_graph=True):
         # Create NetworkX graph
         self.graph = None
@@ -20,7 +20,8 @@ class FindPath:
     def update_graph(self):
         """ Use for update NetworkX graph object
         """
-        devices = services.device_service.get_active()
+        devices = services.device_service.get_all()
+        # print(services.device_service.get_active().count())
         self.graph = gen_nb.create_networkx_graph(devices)
 
     def active_by_subnet(self, src_subnet, dst_subnet):
@@ -39,7 +40,8 @@ class FindPath:
         if self.auto_update_graph:
             self.update_graph()
 
-        raise NotImplementedError()
+        path = nx.shortest_path(self.graph, src_ip, dst_ip)
+        return path
 
     def all_by_manage_ip(self, src_ip, dst_ip):
         """
@@ -56,5 +58,8 @@ class FindPath:
     def plot(self):
         if self.auto_update_graph:
             self.update_graph()
-
-        print(self.graph)
+        # plt.rcParams["figure.figsize"] = [30, 30]
+        nx.draw_networkx_edge_labels(self.graph, pos=nx.spring_layout(self.graph))
+        nx.draw_circular(self.graph, with_labels=True)
+        # plt.plot()
+        plt.show()

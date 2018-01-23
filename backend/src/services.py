@@ -47,6 +47,9 @@ class DeviceService(Service):
         """ Get devices is active """
         return self.device.find({'active': True})
 
+    def get_all(self):
+        return self.device.find()
+
     def find_by_if_ip(self, ip):
         """
         """
