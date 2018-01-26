@@ -6,7 +6,7 @@ from functools import reduce
 
 from netmiko import ConnectHandler
 from netmiko.ssh_exception import NetMikoTimeoutException
-from helpers.path import PathFinder
+from helpers.path_finder import PathFinder
 
 import gen_nb
 import gen_subnet
@@ -373,7 +373,7 @@ class Topology:
                 })
 
     def run(self):
-        """ Start topoloygy loop
+        """ Start topology loop
         """
         if not self.app_service.is_running():
             self._netflow_worker.start()

@@ -37,61 +37,62 @@ def to_value(rfc1902_object):
 async def get(host, community, varBinds, max_repetitions=16, port=161, mibs=None):
     # print(host + ' >>> Running...')
     data = []
-    snmpEngine = SnmpEngine()
-    vbProcessor = CommandGeneratorVarBinds()
-    initialVars = [x[0] for x in vbProcessor.makeVarBinds(snmpEngine, varBinds)]
-    nullVarBinds = [False] * len(varBinds)
-    lexicographicMode = False
-    stopFlag = False
+    snmp_engine = SnmpEngine()
+    vb_processor = CommandGeneratorVarBinds()
+    initial_vars = [x[0] for x in vb_processor.makeVarBinds(snmp_engine, varBinds)]
+    null_var_binds = [False] * len(varBinds)
+    lexicographic_mode = False
+    stop_flag = False
     start_time = time.time()
-    while not stopFlag:
-        (errorIndication,
-         errorStatus,
-         errorIndex,
-         varBindTable) = await bulkCmd(
-            snmpEngine,
+
+    while not stop_flag:
+        (error_indication,
+         error_status,
+         error_index,
+         var_bind_table) = await bulkCmd(
+            snmp_engine,
             CommunityData(community),
             UdpTransportTarget((host, port)),
             ContextData(),
             0, max_repetitions,
             *varBinds,
-            lexicographicMode=False)
+            lexicographicMode=lexicographic_mode)
 
         # Received packet time
         # recv_time = time.time()
         # logging.debug("Usage time {:.3f}".format(recv_time - start_time))
-        # print(varBindTable)
-        if errorIndication:
+        # print(var_bind_table)
+        if error_indication:
             # No SNMP response received before timeout
-            logging.debug(errorIndication)
+            logging.debug(error_indication)
             data = None
             break
-        elif errorStatus:
+        elif error_status:
             print('%s at %s' % (
-                errorStatus.prettyPrint(),
-                errorIndex and varBinds[int(errorIndex) - 1][0] or '?'
+                error_status.prettyPrint(),
+                error_index and varBinds[int(error_index) - 1][0] or '?'
             )
                   )
         else:
-            for row in range(len(varBindTable)):
-                stopFlag = True
-                if len(varBindTable[row]) != len(varBinds):
-                    varBindTable = row and varBindTable[:row - 1] or []
+            for row in range(len(var_bind_table)):
+                stop_flag = True
+                if len(var_bind_table[row]) != len(varBinds):
+                    var_bind_table = row and var_bind_table[:row - 1] or []
                     break
                 context = {}
-                for col in range(len(varBindTable[row])):
-                    name, val = varBindTable[row][col]
-                    if nullVarBinds[col]:
-                        varBindTable[row][col] = name, endOfMibView
+                for col in range(len(var_bind_table[row])):
+                    name, val = var_bind_table[row][col]
+                    if null_var_binds[col]:
+                        var_bind_table[row][col] = name, endOfMibView
                         continue
-                    stopFlag = False
+                    stop_flag = False
                     if isinstance(val, Null):
-                        nullVarBinds[col] = True
-                    elif not lexicographicMode and not initialVars[col].isPrefixOf(name):
-                        varBindTable[row][col] = name, endOfMibView
-                        nullVarBinds[col] = True
+                        null_var_binds[col] = True
+                    elif not lexicographic_mode and not initial_vars[col].isPrefixOf(name):
+                        var_bind_table[row][col] = name, endOfMibView
+                        null_var_binds[col] = True
                     else:
-                        varBind = varBindTable[row][col]
+                        varBind = var_bind_table[row][col]
                         if mibs:
                             context[mibs[col]] = to_value(varBind[1])
                         else:
@@ -102,41 +103,14 @@ async def get(host, community, varBinds, max_repetitions=16, port=161, mibs=None
                     context['device_ip'] = host
                     data.append(context)
 
-                if stopFlag:
-                    varBindTable = row and varBindTable[:row - 1] or []
+                if stop_flag:
+                    var_bind_table = row and var_bind_table[:row - 1] or []
                     break
-            # print('------------------Start-----------------')
-            # for varBinds in varBindTable:
-            #     context = {}
-            #     for index, varBind in enumerate(varBinds):
-            #         # print('------------------Start2-----------------')
-            #         # print(index)
-            #         if isinstance(varBind[1], EndOfMibView):
-            #             stopFlag = True
-            #             break
-            #         # print(len(varBind))
-            #         # print(' = '.join([x.prettyPrint() for x in varBind]), end='')
-            #         # print(' (type = {})'.format(type(varBind[1])))
-            #         if mibs:
-            #             context[mibs[index]] = to_value(varBind[1])
-            #         else:
-            #             context[str(varBind[0].getOid())] = to_value(varBind[1])
-            #     # print('------------------End2-----------------')
-            #     if len(context) > 0:
-            #         # print(context)
-            #         context['device_ip'] = host
-            #         data.append(context)
-            # print('------------------End-----------------')
-            if not stopFlag:
-                varBinds = varBindTable[-1]
 
-    # sleep_time = random.random()
-    # print(host + ' >>> Ending...')
-    # await asyncio.sleep(sleep_time)
-    # print(host + ' >>> Sleep ' + str(sleep_time))
-    # yield 123456
-    # return 1
-    snmpEngine.transportDispatcher.closeDispatcher()
+            if not stop_flag:
+                varBinds = var_bind_table[-1]
+
+    snmp_engine.transportDispatcher.closeDispatcher()
     return data
 
 

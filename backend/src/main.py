@@ -1,19 +1,20 @@
-""" SDN Handmade for legacy cisco device """
-import multiprocessing as mp
-
-import threading
-import time
+""" SDN Handmade for legacy Cisco device """
+import matplotlib
 import os
-import logbug as lb
-import sdn_handmade as sdn
-from cli.cli_controller import CLIController
-import settings
-from api.rest_server import RestServer
 
 
 def main():
     """ Run SDN Controller Server
     """
+    import multiprocessing as mp
+    import threading
+    import time
+    import logbug as lb
+    import sdn_handmade as sdn
+    from cli.cli_controller import CLIController
+    import settings
+    from api.rest_server import RestServer
+
     queue = mp.Queue()
 
     log_bug = lb.LogBug(queue)
@@ -52,6 +53,8 @@ def main():
 
 
 if __name__ == '__main__':
+    # Fix when draw image in terminal without display
+    matplotlib.use('Agg')
     # FORMAT = '%(asctime)-15s - %(name)s - %(message)s'
     # logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
     #                     format=FORMAT)

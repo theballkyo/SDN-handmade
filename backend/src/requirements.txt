@@ -1,6 +1,9 @@
 pymongo==3.5.1
-pysnmp==4.3.9
+pysnmp==4.4.4.
 Pillow==5.0.0
 netmiko==2.0.1
 networkx==2.0
 Flask==0.12.2
+ipcalc==1.99.0
+matplotlib==2.1.2
+netaddr==0.7.19

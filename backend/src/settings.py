@@ -3,7 +3,7 @@ database = {
         'driver': 'mongodb',  # Currently support only mongo
         # 'username': '',
         # 'password': '',
-        'uri': 'mongodb://localhost:27017/',
+        'uri': 'mongodb://192.168.99.100:27017/',
         'database': 'sdn_test2',
         'max_pool_size': 10,
     }

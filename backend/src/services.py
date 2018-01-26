@@ -1,4 +1,5 @@
 from database import get_mongodb
+import os
 
 
 class Service:
@@ -26,6 +27,7 @@ class AppService(Service):
 class CdpService(Service):
     def __init__(self, *args, **kwargs):
         super(CdpService, self).__init__(*args, **kwargs)
+        self.cdp = self.db.cdp
 
     def get_by_management_ip(self, management_ip):
         return self.db.cdp.find_one({'management_ip': management_ip})
@@ -81,7 +83,69 @@ class DeviceService(Service):
         self.device.remove({'management_ip': management_ip})
 
 
+class RouteService(Service):
+    ipCidrRouteType = {
+        'other': 1,
+        'reject': 2,
+        'local': 3,
+        'remote': 4
+    }
+
+    def __init__(self, *args, **kwargs):
+        super(RouteService, self).__init__(*args, **kwargs)
+        self.route = self.db.route
+
+    def find_by_device(self, management_ip):
+        # Todo fix devie_ip to management_ip
+        return self.route.find({'device_ip': management_ip})
+
+    def find_by_network(self, network, mask, route_type=None):
+        if route_type:
+            route = self.route.find({
+                'ipCidrRouteType': route_type,
+                'ipCidrRouteDest': network,
+                'ipCidrRouteMask': mask
+            })
+        else:
+            route = self.route.find({
+                'ipCidrRouteDest': network,
+                'ipCidrRouteMask': mask
+            })
+
+        return route
+
+    def find_by_type_is_local(self, network, mask):
+        return self.find_by_network(network, mask, self.ipCidrRouteType['local'])
+
+
+_cache = {
+    'app': {},
+    'cdp': {},
+    'device': {},
+    'route': {}
+}
+
+_SERVICES = {
+    'app': AppService,
+    'cdp': CdpService,
+    'device': DeviceService,
+    'route': RouteService
+}
+
+
+def get_service(name):
+    pid = os.getpid()
+    if name not in _SERVICES:
+        raise ValueError("No service name: {}".format(name)
+                         )
+    if pid not in _cache[name]:
+        _cache[name]['pid'] = _SERVICES[name]()
+
+    return _cache[name]['pid']
+
+
 # Prepare to create a objects
 app_service = AppService()
 cdp_service = CdpService()
 device_service = DeviceService()
+route_service = RouteService()
