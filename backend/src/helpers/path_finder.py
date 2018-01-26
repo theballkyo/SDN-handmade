@@ -54,14 +54,20 @@ class PathFinder:
 
         if routes.count() == 0:
             # print('END 1', end='')
-            path.append(prev_path + [start_device_ip])
+            final_path = prev_path + [start_device_ip]
+            if start_device_ip != str(dst_ip):
+                final_path.append(str(dst_ip))
+            path.append(final_path)
             return
         bbb = start_device_ip
         for route in routes:
             next_hop = route['next_hop']
             if next_hop == '0.0.0.0':
-                print(">>>", prev_path + [start_device_ip])
-                path.append(prev_path + [start_device_ip])
+                # print(">>>", prev_path + [start_device_ip])
+                final_path = prev_path + [start_device_ip]
+                if start_device_ip != str(dst_ip):
+                    final_path.append(str(dst_ip))
+                path.append(final_path)
                 return
             next_hop_device = services.get_service('device').device.find_one({
                 'interfaces.ipv4_address': next_hop

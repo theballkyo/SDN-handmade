@@ -28,6 +28,13 @@ def main():
     print("Active path: 192.168.1.1 to 10.0.1.2")
     path3 = path_finder.active_by_manage_ip('192.168.1.1', '10.0.1.2')
     pprint.pprint(path3)
+    for path in map(nx.utils.pairwise, path3):
+        for pp in path:
+            try:
+                edge = path_finder.graph.edges[pp]
+                print(edge)
+            except KeyError:
+                continue
 
     print("=" * 100)
     print("Active path: 192.168.1.1 to 192.168.1.10")
