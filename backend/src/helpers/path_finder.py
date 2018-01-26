@@ -37,7 +37,7 @@ class PathFinder:
         if prev_path is None:
             prev_path = []
         if path is None:
-            path = []
+            path = set()
         dst_ip = netaddr.IPAddress(dst_ip)
         start_device_ip = src_ip
 
@@ -57,7 +57,7 @@ class PathFinder:
             final_path = prev_path + [start_device_ip]
             if start_device_ip != str(dst_ip):
                 final_path.append(str(dst_ip))
-            path.append(final_path)
+            path.add(tuple(final_path))
             return
         bbb = start_device_ip
         for route in routes:
@@ -67,7 +67,7 @@ class PathFinder:
                 final_path = prev_path + [start_device_ip]
                 if start_device_ip != str(dst_ip):
                     final_path.append(str(dst_ip))
-                path.append(final_path)
+                path.add(tuple(final_path))
                 return
             next_hop_device = services.get_service('device').device.find_one({
                 'interfaces.ipv4_address': next_hop
