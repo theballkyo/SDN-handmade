@@ -2,10 +2,8 @@ node {
     def app
     def branch = env.BRANCH_NAME
     def test = "aaaa"
-    
-    triggers {
-        pollSCM('H/5 * * * *')
-    }
+
+    properties([pipelineTriggers([pollSCM('H/2 * * * * ')
 
     stage('Test before run') {
         sh "echo ${branch}"
