@@ -284,7 +284,7 @@ async def get_cdp(host, community, port=161):
 
 
 async def get_lldp(host, community, port=161):
-    """ Get CDP
+    """ Get LLDP
     """
 
     object_types = (
@@ -327,13 +327,5 @@ async def get_lldp(host, community, port=161):
 
     info = await get(host, community, object_types, mibs=mibs)
 
-    # print(info)
-
-    # if len(data) == 0:
-    #     return []
-    #
-    # for dat in data:
-    #     dat['version'] = sdn_utils.hex_to_string(dat['version'])
-    #     dat['ip_addr'] = utils.hex_to_ip(dat['ip_addr'])
-
-    return data
+    # return data
+    raise NotImplementedError()

@@ -10,37 +10,25 @@ async def process_cdp(host, community, port):
     cdp_service = services.get_service('cdp')
     device_service = services.get_service('device')
     cdp = await snmp_async.get_cdp(host, community, port)
+
     if cdp is None:
-        cdp_enable = False
+        device_service.device.update_one({
+            'management_ip': host
+        }, {
+            '$set': {
+                'cdp_enable': False
+            }
+        })
     else:
-        cdp_enable = True
-
-    # device = device_service.device.find_one({'management_ip': host})
-
-    # for neighbor in cdp:
-    #     for device_if in device['interfaces']:
-    #         # print(neighbor)
-    #         if device_if['index'] == neighbor['if_index']:
-    #             neighbor['local_port'] = device_if['description']
-    #             break
-
-    # Insert CDP
-    cdp_service.cdp.update_one({
-        'management_ip': host
-    }, {
-        '$set': {
-            'management_ip': host,
-            'neighbor': cdp
-        }
-    }, upsert=True)
-
-    device_service.device.update_one({
-        'management_ip': host
-    }, {
-        '$set': {
-            'cdp_enable': cdp_enable
-        }
-    })
+        # Insert CDP
+        cdp_service.cdp.update_one({
+            'management_ip': host
+        }, {
+            '$set': {
+                'management_ip': host,
+                'neighbor': cdp
+            }
+        }, upsert=True)
 
     return True
 
@@ -50,6 +38,18 @@ async def process_system(host, community, port):
     system_info = await snmp_async.get_system_info(host, community, port)
     ip_addrs = await snmp_async.get_ip_addr(host, community, port)
     interfaces = await snmp_async.get_interfaces(host, community, port)
+
+    if system_info:
+        print("SNMP (Process system [sys info]): host {} is down".format(host))
+        return
+
+    if ip_addrs:
+        print("SNMP (Process system [ip addr]): host {} is down".format(host))
+        return
+
+    if interfaces:
+        print("SNMP (Process system [interface]): host {} is down".format(host))
+        return
 
     # Todo optimize this
     for if_index, interface in enumerate(interfaces):
@@ -124,6 +124,10 @@ async def process_system(host, community, port):
 async def process_route(host, community, port):
     route_service = services.get_service('route')
     routes = await snmp_async.get_routes(host, community, port)
+
+    if routes is None:
+        print("SNMP (Process route): host {} is down".format(host))
+        return
     # Clear old routes
     route_service.route.delete_many({
         'management_ip': host

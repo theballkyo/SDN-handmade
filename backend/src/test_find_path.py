@@ -7,6 +7,15 @@ matplotlib.use('Agg')
 def main():
     from helpers.path_finder import PathFinder
     import pprint
+    import services
+
+    device_service = services.get_service("device")
+    device_service.get_active()
+
+    device_service.device.find({})
+
+    route_service = services.get_service("route")
+    route_service.route.find()
 
     path_finder = PathFinder(auto_update_graph=False)
 
