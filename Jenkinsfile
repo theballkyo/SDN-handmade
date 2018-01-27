@@ -20,7 +20,7 @@ node {
                 /* This builds the actual image; synonymous to
                 * docker build on the command line */
 
-                app = docker.build("sdn_test")
+                app = docker.build("sdn_test:${branch}-${env.BUILD_NUMBER}")
             }
 
             stage('Test image') {
