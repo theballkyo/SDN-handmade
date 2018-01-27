@@ -8,7 +8,9 @@ node {
     }
 
     stage('change directory') {
-        dir('backend/src')
+        dir('backend/src') {
+            sh 'pwd'
+        }
     }
 
     stage('Build image') {
