@@ -1,5 +1,13 @@
 node {
     def app
+    def branch = env.BRANCH_NAME
+    def test = "aaaa"
+
+    stage('Test before run') {
+        sh "echo ${branch}"
+        sh "echo ${test}"
+    }
+
     stage('Clone repository') {
         /* Let's make sure we have the repository cloned to our workspace */
 
