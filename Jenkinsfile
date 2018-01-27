@@ -3,7 +3,7 @@ node {
     def branch = env.BRANCH_NAME
     def test = "aaaa"
 
-    properties([pipelineTriggers([pollSCM('H/2 * * * * ')))
+    properties([pipelineTriggers([pollSCM('H/2 * * * * ')])])
 
     stage('Test before run') {
         sh "echo ${branch}"
