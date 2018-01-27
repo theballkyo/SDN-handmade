@@ -8,9 +8,7 @@ node {
     }
 
     stage('change directory') {
-        steps {
-            dir('backend/src')
-        }
+        dir('backend/src')
     }
 
     stage('Build image') {
