@@ -14,13 +14,18 @@ node {
         checkout scm
     }
 
-    stage('Change dir') {
+    stage('Change dir to backend') {
         dir('backend/src') {
             stage('Build image') {
                 /* This builds the actual image; synonymous to
                 * docker build on the command line */
-
-                app = docker.build("sdn_test:${branch}-${env.BUILD_NUMBER}")
+                if (branch == 'develop') {
+                    app = docker.build("sdn_backend:latest")
+                } else if (branch == 'master') {
+                    app = docker.build("sdn_backend:stable")
+                } else {
+                    app = docker.build("sdn_backend:${branch}")
+                }
             }
 
             stage('Test image') {
@@ -32,5 +37,9 @@ node {
                 }
             }
         }
+    }
+
+    stage('Push image') {
+        sh 'echo "Todo ja"'
     }
 }
