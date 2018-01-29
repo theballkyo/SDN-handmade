@@ -38,10 +38,11 @@ node {
         }
     }
 
-    stage('Push image') {
-        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'docker-registry',
-        usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-            sh 'docker login -u $USERNAME -p $PASSWORD registry.ryoka.tk'
+    stage('Push docker image') {
+        docker.withRegistry('https://registry.ryoka.tk', 'docker-registry') {
+            // app.push("${env.BUILD_NUMBER}")
+            app.push()
         }
     }
+    
 }
