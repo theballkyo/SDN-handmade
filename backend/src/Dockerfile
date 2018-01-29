@@ -10,8 +10,10 @@ RUN apt-get update && apt-get install -y gcc \
 
 WORKDIR /data
 
-COPY . /data
+COPY requirements.txt /data/requirements.txt
 
 RUN pip install -r requirements.txt
+
+COPY . /data
 
 ENTRYPOINT ["python", "main.py"]
