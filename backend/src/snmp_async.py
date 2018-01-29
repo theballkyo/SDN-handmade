@@ -34,16 +34,16 @@ def to_value(rfc1902_object):
     return rfc1902_object.prettyPrint()
 
 
-async def get(host, community, varBinds, max_repetitions=16, port=161, mibs=None):
-    # print(host + ' >>> Running...')
+async def get(host, community, port, oid_list, max_repetitions=16):
+    oid_name = tuple(oid_list.keys())
+    var_binds = tuple(oid_list.values())
     data = []
     snmp_engine = SnmpEngine()
     vb_processor = CommandGeneratorVarBinds()
-    initial_vars = [x[0] for x in vb_processor.makeVarBinds(snmp_engine, varBinds)]
-    null_var_binds = [False] * len(varBinds)
+    initial_vars = [x[0] for x in vb_processor.makeVarBinds(snmp_engine, var_binds)]
+    null_var_binds = [False] * len(var_binds)
     lexicographic_mode = False
     stop_flag = False
-    start_time = time.time()
 
     while not stop_flag:
         (error_indication,
@@ -55,7 +55,7 @@ async def get(host, community, varBinds, max_repetitions=16, port=161, mibs=None
             UdpTransportTarget((host, port)),
             ContextData(),
             0, max_repetitions,
-            *varBinds,
+            *var_binds,
             lexicographicMode=lexicographic_mode)
 
         # Received packet time
@@ -70,13 +70,13 @@ async def get(host, community, varBinds, max_repetitions=16, port=161, mibs=None
         elif error_status:
             print('%s at %s' % (
                 error_status.prettyPrint(),
-                error_index and varBinds[int(error_index) - 1][0] or '?'
+                error_index and var_binds[int(error_index) - 1][0] or '?'
             )
                   )
         else:
             for row in range(len(var_bind_table)):
                 stop_flag = True
-                if len(var_bind_table[row]) != len(varBinds):
+                if len(var_bind_table[row]) != len(var_binds):
                     var_bind_table = row and var_bind_table[:row - 1] or []
                     break
                 context = {}
@@ -92,11 +92,11 @@ async def get(host, community, varBinds, max_repetitions=16, port=161, mibs=None
                         var_bind_table[row][col] = name, endOfMibView
                         null_var_binds[col] = True
                     else:
-                        varBind = var_bind_table[row][col]
+                        var_bind = var_bind_table[row][col]
                         if mibs:
-                            context[mibs[col]] = to_value(varBind[1])
+                            context[oid_name[col]] = to_value(var_bind[1])
                         else:
-                            context[str(varBind[0].getOid())] = to_value(varBind[1])
+                            context[str(var_bind[0].getOid())] = to_value(var_bind[1])
 
                 if len(context) > 0:
                     # print(context)
@@ -108,143 +108,92 @@ async def get(host, community, varBinds, max_repetitions=16, port=161, mibs=None
                     break
 
             if not stop_flag:
-                varBinds = var_bind_table[-1]
+                var_binds = var_bind_table[-1]
 
     snmp_engine.transportDispatcher.closeDispatcher()
     return data
 
 
-async def get_interfaces(host, community, port=161, oid='.1.3.6.1.2.1.2.1.0'):
-    '''Get interfaces infomation
-    '''
-    object_types = (
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.1')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.2')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.3')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.4')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.5')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.6')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.7')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.8')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.9')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.10')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.11')),
+async def get_interfaces(host, community, port=161):
+    """ Get interfaces information
+    """
+    object_types = {
+        'index': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.1')),
+        'description': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.2')),
+        'type': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.3')),
+        'mtu': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.4')),
+        'speed': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.5')),
+        'physical_address': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.6')),
+        'admin_status': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.7')),
+        'operational_status': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.8')),
+        'last_change': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.9')),
+        'in_octets': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.10')),
+        'in_ucast_packets': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.11')),
         #    ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.12')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.13')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.14')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.15')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.16')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.17')),
+        'in_discards': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.13')),
+        'in_errors': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.14')),
+        'in_unknown_protos': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.15')),
+        'out_octets': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.16')),
+        'out_ucast_packets': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.17')),
         #    ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.18')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.19')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.20')),
+        'out_discards': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.19')),
+        'out_errors': ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.20')),
         #    ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.21')),
         #    ObjectType(ObjectIdentity('1.3.6.1.2.1.2.2.1.22')),
-    )
+    }
 
-    mibs = [
-        'index',
-        'description',
-        'type',
-        'mtu',
-        'speed',
-        'physical_address',
-        'admin_status',
-        'operational_status',
-        'last_change',
-        'in_octets',
-        'in_ucast_packets',
-        'in_discards',
-        'in_errors',
-        'in_unknown_protos',
-        'out_octets',
-        'out_ucast_packets',
-        'out_discards',
-        'out_errors',
-    ]
-
-    return await get(host, community, object_types, max_repetitions=100, mibs=mibs)
+    return await get(host, community, port, object_types, max_repetitions=100)
 
 
-async def get_ip_addr(host, community, port):
+async def get_ip_addr(host, community, port=161):
     """
     """
-    object_types = (
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.20.1.1')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.20.1.2')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.20.1.3'))
-    )
+    object_types = {
+        'ipv4_address': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.20.1.1')),
+        'if_index': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.20.1.2')),
+        'subnet': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.20.1.3'))
+    }
 
-    mibs = [
-        'ipv4_address',
-        'if_index',
-        'subnet'
-    ]
-
-    return await get(host, community, object_types, mibs=mibs)
+    return await get(host, community, object_types)
 
 
 async def get_routes(host, community, port=161):
-    ''' Get routing table
-    '''
+    """ Get routing table
+    """
 
-    object_types = (
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.1')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.2')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.3')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.4')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.5')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.6')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.7')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.8')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.9')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.10')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.11')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.12')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.13')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.14')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.15')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.16'))
-    )
+    object_types = {
+        'dst': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.1')),
+        'mask': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.2')),
+        'tos': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.3')),
+        'next_hop': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.4')),
+        'if_index': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.5')),
+        'type': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.6')),
+        'proto': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.7')),
+        'age': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.8')),
+        'info': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.9')),
+        'next_hop_AS': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.10')),
+        'metric1': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.11')),
+        'metric2': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.12')),
+        'metric3': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.13')),
+        'metric4': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.14')),
+        'metric5': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.15')),
+        'status': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.24.4.1.16'))
+    }
 
-    mibs = [
-        'dest',
-        'mask',
-        'tos',
-        'next_hop',
-        'if_index',
-        'type',
-        'proto',
-        'age',
-        'info',
-        'next_hop_AS',
-        'metric1',
-        'metric2',
-        'metric3',
-        'metric4',
-        'metric5',
-        'status'
-    ]
-
-    return await get(host, community, object_types, mibs=mibs)
+    return await get(host, community, port, object_types)
 
 
 async def get_system_info(host, community, port=161):
     """
     """
 
-    object_types = (
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.1.1')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.1.3')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.1.5'))
-    )
+    object_types = {
+        'description': ObjectType(ObjectIdentity('1.3.6.1.2.1.1.1')),
+        'uptime': ObjectType(ObjectIdentity('1.3.6.1.2.1.1.3')),
+        'name': ObjectType(ObjectIdentity('1.3.6.1.2.1.1.5'))
+    }
 
-    mibs = [
-        'description',
-        'uptime',
-        'name'
-    ]
-    data = await get(host, community, object_types, mibs=mibs)
+    data = await get(host, community, port, object_types)
     if data is None or len(data) == 0:
         return None
     data = data[0]
@@ -257,21 +206,14 @@ async def get_cdp(host, community, port=161):
     """
     # Todo add local interface
     # More detail: http://www.oidview.com/mibs/9/CISCO-CDP-MIB.html
-    object_types = (
-        ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.4')),
-        ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.5')),
-        ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.6')),
-        ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.7')),
-    )
+    object_types = {
+        'ip_addr': ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.4')),
+        'version': ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.5')),
+        'name': ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.6')),
+        'port': ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.7')),
+    }
 
-    mibs = [
-        'ip_addr',
-        'version',
-        'name',
-        'port',
-    ]
-
-    data = await get(host, community, object_types, mibs=mibs)
+    data = await get(host, community, port, object_types)
 
     if data is None or len(data) == 0:
         return None
@@ -286,46 +228,4 @@ async def get_cdp(host, community, port=161):
 async def get_lldp(host, community, port=161):
     """ Get LLDP
     """
-
-    object_types = (
-        ObjectType(ObjectIdentity('1.0.8802.1.1.2.1.3.7.1.3')),
-        ObjectType(ObjectIdentity('1.0.8802.1.1.2.1.3.7.1.4')),
-        # ObjectType(ObjectIdentity('1.0.8802.1.1.2.1.4.1.1.5.0')),
-        # ObjectType(ObjectIdentity('1.0.8802.1.1.2.1.3.8.1.5.1.4')),
-        # ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.7')),
-    )
-
-    mibs = [
-        'name',
-        'full_name',
-        # 'if_id',
-        # 'mac',
-        # 'if_id',
-        # 'port',
-    ]
-
-    data = await get(host, community, object_types, mibs=mibs)
-
-    object_types = (
-        ObjectType(ObjectIdentity('1.0.8802.1.1.2.1.3.8.1.5.1.4')),
-        ObjectType(ObjectIdentity('1.0.8802.1.1.2.1.4.1.1.9')),
-        ObjectType(ObjectIdentity('1.0.8802.1.1.2.1.4.1.1.5.0')),
-        # ObjectType(ObjectIdentity('1.0.8802.1.1.2.1.4.1.1.5.0')),
-        # ObjectType(ObjectIdentity('1.0.8802.1.1.2.1.3.8.1.5.1.4')),
-        # ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.7')),
-    )
-
-    mibs = [
-        'for_if_id',
-        'sys_name',
-        'chassis_id',
-        # 'if_id',
-        # 'mac',
-        # 'if_id',
-        # 'port',
-    ]
-
-    info = await get(host, community, object_types, mibs=mibs)
-
-    # return data
     raise NotImplementedError()
