@@ -8,6 +8,7 @@ from netmiko import ConnectHandler
 from netmiko.ssh_exception import NetMikoTimeoutException
 from helpers.path_finder import PathFinder
 
+import threading
 import gen_nb
 import gen_subnet
 import sdn_utils
@@ -376,8 +377,13 @@ class Topology:
         """ Start topology loop
         """
         if not self.app_service.is_running():
+            # Resetting snmp status
+            devices = self.device_service.get_all()
+            for device in devices:
+                self.device_service.set_snmp_running(device['management_ip'], False)
+
             self._netflow_worker.start()
-            self._snmp_worker.run()
+            threading.Thread(target=self._snmp_worker.run).start()
             self.app_service.set_running(True)
 
     def shutdown(self):

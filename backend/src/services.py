@@ -52,6 +52,28 @@ class DeviceService(Service):
     def get_all(self):
         return self.device.find()
 
+    def get_by_snmp_is_running(self, is_running):
+        return self.device.find({
+            'snmp_is_running': is_running
+        })
+
+    def set_snmp_running(self, management_ip, is_running):
+        self.device.update_one({
+            'management_ip': management_ip
+        }, {
+            '$set': {
+                'snmp_is_running': is_running
+            }
+        })
+
+    def snmp_is_running(self, management_ip):
+        device = self.device.find_one({
+            'management_ip': management_ip
+        })
+        if device is None:
+            return True
+        return device.get('snmp_is_running', False)
+
     def find_by_if_ip(self, ip):
         """
         """
