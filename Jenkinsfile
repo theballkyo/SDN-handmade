@@ -40,9 +40,8 @@ node {
 
     stage('Push image') {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'docker-registry',
-            usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-                sh 'docker login -u $USERNAME -p $PASSWORD registry.ryoka.tk'
-            }
+        usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+            sh 'docker login -u $USERNAME -p $PASSWORD registry.ryoka.tk'
         }
     }
 }
