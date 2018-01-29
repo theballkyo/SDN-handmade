@@ -36,8 +36,8 @@ def main():
     path_finder.save_graph_img()
 
     print("=" * 100)
-    print("Active path: 192.168.1.1 to 10.0.1.2")
-    path3 = path_finder.active_by_manage_ip('192.168.1.1', '10.0.1.2')
+    print("Active path: 192.168.1.1 to 192.168.1.13")
+    path3 = path_finder.active_by_manage_ip('192.168.1.1', '192.168.1.13')
     pprint.pprint(path3)
     for path in map(nx.utils.pairwise, path3):
         for pp in path:
@@ -48,8 +48,8 @@ def main():
                 continue
 
     print("=" * 100)
-    print("Active path: 192.168.1.1 to 192.168.1.10")
-    path4 = path_finder.active_by_manage_ip('192.168.1.1', '192.168.1.10')
+    print("Active path: 192.168.1.13 to 192.168.2.1")
+    path4 = path_finder.active_by_manage_ip('192.168.1.13', '192.168.2.1')
     pprint.pprint(path4)
 
     for path in map(nx.utils.pairwise, path4):
