@@ -1,27 +1,17 @@
-import asyncio
 # import uvloop
-import sys
 import logging
-import sdn_utils
-import random
-import time
 
-from pysnmp.hlapi.varbinds import *
-from pysnmp.proto.rfc1905 import endOfMibView, EndOfMibView
-from pysnmp.hlapi.asyncio import *
 from pyasn1.type.univ import Null
-import pysnmp.proto.errind as errind
-from snmp_type import IF_TYPE
+from pysnmp.hlapi.asyncio import *
+from pysnmp.hlapi.varbinds import *
+from pysnmp.proto.rfc1905 import endOfMibView
+
+import sdn_utils
 
 
 def to_value(rfc1902_object):
     """Convert rfc1902_object to value
     """
-    # if isinstance(rfc1902_object, IpAddress):
-    #     return str(rfc1902_object.prettyPrint())
-    # if isinstance(rfc1902_object, OctetString):
-    #     return str(rfc1902_object)
-    # print(type(rfc1902_object))
     if isinstance(rfc1902_object, Counter64) or \
             isinstance(rfc1902_object, Counter32) or \
             isinstance(rfc1902_object, Integer) or \
@@ -154,7 +144,7 @@ async def get_ip_addr(host, community, port=161):
         'subnet': ObjectType(ObjectIdentity('1.3.6.1.2.1.4.20.1.3'))
     }
 
-    return await get(host, community, object_types)
+    return await get(host, community, port, object_types)
 
 
 async def get_routes(host, community, port=161):

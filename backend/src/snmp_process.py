@@ -4,6 +4,7 @@ import snmp_async
 import services
 import sdn_utils
 import time
+import logging
 
 
 async def process_cdp(host, community, port):
@@ -39,15 +40,15 @@ async def process_system(host, community, port):
     ip_addrs = await snmp_async.get_ip_addr(host, community, port)
     interfaces = await snmp_async.get_interfaces(host, community, port)
 
-    if system_info:
+    if not system_info:
         print("SNMP (Process system [sys info]): host {} is down".format(host))
         return
 
-    if ip_addrs:
+    if not ip_addrs:
         print("SNMP (Process system [ip addr]): host {} is down".format(host))
         return
 
-    if interfaces:
+    if not interfaces:
         print("SNMP (Process system [interface]): host {} is down".format(host))
         return
 
@@ -59,14 +60,6 @@ async def process_system(host, community, port):
                 interface['subnet'] = ip_addr['subnet']
                 break
 
-    # for if_index in range(len(interfaces)):
-    #     for ip_index in range(len(ip_addrs)):
-    #         if interfaces[if_index]['index'] == ip_addrs[ip_index]['if_index']:
-    #             interfaces[if_index]['ipv4_address'] = ip_addrs[ip_index]['ipv4_address']
-    #             interfaces[if_index]['subnet'] = ip_addrs[ip_index]['subnet']
-    #             break
-
-    # print(interfaces[0])
     my_device = device_service.device.find_one({
         'management_ip': host
     })
@@ -90,7 +83,7 @@ async def process_system(host, community, port):
                         interface['speed'],
                         out_in_time)
 
-                    # Add infomation
+                    # Add information
                     interface['bw_in_usage_octets'] = in_octets
                     interface['bw_in_usage_percent'] = bw_in_usage_percent
 
@@ -99,15 +92,15 @@ async def process_system(host, community, port):
 
                     interface['bw_usage_update'] = time.time()
 
-                    # logging.debug(
-                    #     ' || BW in usage %.3f%% || %d bytes',
-                    #     bw_in_usage_percent,
-                    #     in_octets)
-                    #
-                    # logging.debug(
-                    #     ' || BW out usage %.3f%% || %d bytes',
-                    #     bw_out_usage_percent,
-                    #     out_octets)
+                    logging.debug(
+                        ' || BW in usage %.3f%% || %d bytes',
+                        bw_in_usage_percent,
+                        in_octets)
+
+                    logging.debug(
+                        ' || BW out usage %.3f%% || %d bytes',
+                        bw_out_usage_percent,
+                        out_octets)
                     break
 
     system_info['interfaces'] = interfaces
@@ -134,7 +127,7 @@ async def process_route(host, community, port):
     })
 
     for route in routes:
-        ip = IPNetwork("{}/{}".format(route['dest'], route['mask']))
+        ip = IPNetwork("{}/{}".format(route['dst'], route['mask']))
 
         if ip.size == 1:
             start_ip = ip.first
