@@ -19,6 +19,8 @@ def main():
 
     path_finder = PathFinder(auto_update_graph=False)
 
+    path_finder.graph.add_edge("192.168.1.1", "10.0.0.1")
+
     print(path_finder.graph.edges["192.168.1.2", "192.168.1.1"])
     # pprint.pprint(path_finder.graph)
     path1 = path_finder.all_by_manage_ip("192.168.1.1", "192.168.1.10")
