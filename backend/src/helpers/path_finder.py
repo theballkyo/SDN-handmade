@@ -110,17 +110,28 @@ class PathFinder:
         # plt.plot()
         plt.show()
 
-    def save_graph_img(self, filename=None, figsize=(15, 15), labels=False):
+    def save_graph_img(self, filename=None, figsize=(15, 15), labels=False, layout='kamada_kawai'):
         if not filename:
             filename = "imgs/topo-{}.png".format(time.time())
+
+        layouts = {
+            'kamada_kawai': nx.kamada_kawai_layout,
+            'circular': nx.circular_layout,
+            'spectral': nx.spectral_layout,
+            'spring': nx.spring_layout
+        }
+
+        if layout not in layouts.keys():
+            print("Can't not find layout name: {}".format(layout))
+            return
 
         # Set fig size
         plt.rcParams["figure.figsize"] = figsize
         # Include edge labels
         if labels:
-            nx.draw_networkx_edge_labels(self.graph, pos=nx.spring_layout(self.graph))
+            nx.draw_networkx_edge_labels(self.graph)
 
-        nx.draw_circular(self.graph, with_labels=True)
-
+        # nx.draw_circular(self.graph, with_labels=True)
+        nx.draw(self.graph, pos=layouts[layout](self.graph), with_labels=True)
         plt.savefig(filename)
         print("Saved file to: {}".format(filename))
