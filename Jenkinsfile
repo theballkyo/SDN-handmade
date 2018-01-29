@@ -10,7 +10,6 @@ node {
 
     stage('Clone repository') {
         /* Let's make sure we have the repository cloned to our workspace */
-
         checkout scm
     }
 
@@ -20,11 +19,11 @@ node {
                 /* This builds the actual image; synonymous to
                 * docker build on the command line */
                 if (branch == 'develop') {
-                    app = docker.build("sdn_backend:latest")
+                    app = docker.build("registry.ryoka.tk/sdn_backend:latest")
                 } else if (branch == 'master') {
-                    app = docker.build("sdn_backend:stable")
+                    app = docker.build("registry.ryoka.tk/sdn_backend:stable")
                 } else {
-                    app = docker.build("sdn_backend:${branch}")
+                    app = docker.build("registry.ryoka.tk/sdn_backend:${branch}")
                 }
             }
 
@@ -40,6 +39,10 @@ node {
     }
 
     stage('Push image') {
-        sh 'echo "Todo ja"'
+        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'docker-registry',
+            usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+                sh 'docker login -u $USERNAME -p $PASSWORD registry.ryoka.tk'
+            }
+        }
     }
 }
