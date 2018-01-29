@@ -72,6 +72,9 @@ class PathFinder:
             next_hop_device = services.get_service('device').device.find_one({
                 'interfaces.ipv4_address': next_hop
             })
+            if next_hop_device is None:
+                # TODO not find device
+                return ''
             start_device_ip = next_hop_device['management_ip']
             prev_path.append(bbb)
             self.active_by_manage_ip(start_device_ip, str(dst_ip), prev_path, path)

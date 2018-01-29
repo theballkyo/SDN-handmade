@@ -83,10 +83,10 @@ async def get(host, community, port, oid_list, max_repetitions=16):
                         null_var_binds[col] = True
                     else:
                         var_bind = var_bind_table[row][col]
-                        if mibs:
-                            context[oid_name[col]] = to_value(var_bind[1])
-                        else:
-                            context[str(var_bind[0].getOid())] = to_value(var_bind[1])
+                        # if oid_name[col]:
+                        context[oid_name[col]] = to_value(var_bind[1])
+                        # else:
+                        #     context[str(var_bind[0].getOid())] = to_value(var_bind[1])
 
                 if len(context) > 0:
                     # print(context)
