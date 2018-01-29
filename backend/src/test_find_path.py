@@ -31,7 +31,7 @@ def main():
     pprint.pprint(list(path2))
 
     # path_finder.plot()
-    # path_finder.save_graph_img()
+    path_finder.save_graph_img()
 
     print("=" * 100)
     print("Active path: 192.168.1.1 to 10.0.1.2")
