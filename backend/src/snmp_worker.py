@@ -1,72 +1,26 @@
 import asyncio
 import logging
-import multiprocessing
-import queue
+import multiprocessing as mp
+import os
+from concurrent.futures import ThreadPoolExecutor, wait, ProcessPoolExecutor
 import time
-import snmp_process
-import threading
-from netaddr import IPNetwork
-
+import settings
 import services
+import snmp_process
 
-import sdn_utils
-from database import get_mongodb, disconnect
-from snmp_async import (get_cdp, get_interfaces, get_ip_addr, get_lldp,
-                        get_routes, get_system_info)
+try:
+    import uvloop
 
-
-# try:
-#     import uvloop
-# except:
-#     pass
+    can_uvloop = True
+except:
+    can_uvloop = False
 
 
 class SNMPWorker:
     def __init__(self):
         self.running = []
         self.stop_signal = False
-        self.devices = []
-        self.device_running = []
-        self.daemon = True
-        self.loop_time = 15
-        self.__shutdown = multiprocessing.Queue()
-        self.worker_p = []
-        self.device_service = services.get_service('device')
-
-    def add_device(self, device, run=False):
-        """ Add device to worker
-        """
-        # if device
-        # self.devices.append({
-        #     'host': host,
-        #     'port': port,
-        #     'community': community
-        # })
-        self.devices.append(device)
-
-        if run:
-            t_s = multiprocessing.Process(
-                name=device.ip,
-                target=self.run_loop,
-                args=(device,)
-            )
-            t_s.daemon = True
-            t_s.start()
-            self.device_running.append(t_s)
-
-    def remove_device(self, device, port=161):
-        """ Remove device from worker
-        """
-        try:
-            for _ in self.device_running:
-                self.__shutdown.put(device.ip)
-            for device_run in self.device_running:
-                if device_run.name == device.ip:
-                    self.device_running.remove(device_run)
-                    break
-            self.devices.remove(device)
-        except ValueError:
-            pass
+        self.loop_time = 30
 
     @staticmethod
     async def get_and_store(device):
@@ -74,35 +28,37 @@ class SNMPWorker:
         """
 
         host = device['management_ip']
-        community = 'public'
-        port = 161
+        community = device['snmp_info']['community']
+        port = device['snmp_info']['port']
 
-        results = await asyncio.gather(
-            asyncio.ensure_future(snmp_process.process_system(host, community, port)),
-            asyncio.ensure_future(snmp_process.process_route(host, community, port)),
-            asyncio.ensure_future(snmp_process.process_cdp(host, community, port)),
-        )
+        # results = await asyncio.gather(
+        #     asyncio.ensure_future(snmp_process.process_system(host, community, port)),
+        #     asyncio.ensure_future(snmp_process.process_route(host, community, port)),
+        #     asyncio.ensure_future(snmp_process.process_cdp(host, community, port)),
+        # )
 
-        if all(r is None for r in results):
-            logging.info("SNMP Worker: Device ip %s is gone down", host)
+        # if all(r is None for r in results):
+        #     logging.info("SNMP Worker: Device ip %s is gone down", host)
+
+        await snmp_process.process_system(host, community, port)
+        await snmp_process.process_route(host, community, port)
+        await snmp_process.process_cdp(host, community, port)
 
     def run_loop(self, device):
         """ Run loop
         """
-        device_service = services.get_service('device')
         management_ip = device['management_ip']
-        if device_service.snmp_is_running(management_ip):
-            return
+        device_service = services.get_service('device')
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-
+        if can_uvloop:
+            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         logging.debug("SNMP Worker: Start loop device IP %s", management_ip)
 
-        device_service.set_snmp_running(management_ip, True)
         loop.run_until_complete(
             self.get_and_store(device)
         )
-        device_service.set_snmp_running(management_ip, False)
+        device_service.set_snmp_finish_running(management_ip)
 
         loop.close()
         logging.debug("SNMP Worker: device IP %s has stopped", device['management_ip'])
@@ -114,20 +70,41 @@ class SNMPWorker:
         self.stop_signal = True
         logging.info("SNMP Worker: shutdown...")
         logging.debug(self.running)
-        for proc in self.running:
-            proc.join(30)
+        for future in self.running:
+            future.cancel()
+        wait(self.running)
         logging.info("SNMP Worker: shutdown complete")
 
     def run(self):
+        num_worker = settings.snmp_worker.get('pool')
+        if num_worker is None or num_worker == 'auto':
+            num_worker = os.cpu_count()
+
+        try:
+            num_worker = int(num_worker)
+        except ValueError:
+            num_worker = os.cpu_count()
+
+        executor = ProcessPoolExecutor(num_worker)
+        device_service = services.get_service('device')
         while not self.stop_signal:
-            logging.debug("SNMP worker: run loop")
-            self.running = list(filter(lambda proc: proc.is_alive() or proc.exitcode is not None, self.running))
+            self.running = list(filter(lambda x: x.done() is False, self.running))
+            active_device = device_service.get_by_snmp_can_run(self.loop_time)
+            # for device in active_device:
+            #     mp = multiprocessing.Process(target=self.run_loop, args=(device,))
+            #     mp.daemon = True
+            #     self.running.append(mp)
+            #     mp.start()
+            #     time.sleep(0.1)
 
-            active_device = self.device_service.get_by_snmp_is_running(False)
             for device in active_device:
-                mp = multiprocessing.Process(target=self.run_loop, args=(device,))
-                mp.daemon = True
-                self.running.append(mp)
-                mp.start()
+                device_service = services.get_service('device')
+                management_ip = device['management_ip']
+                if device_service.snmp_is_running(management_ip):
+                    return
 
-            time.sleep(3)
+                # Mark device SNMP is running
+                device_service.set_snmp_running(device['management_ip'], True)
+                # Submit
+                self.running.append(executor.submit(self.run_loop, device))
+            time.sleep(1)

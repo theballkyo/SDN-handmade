@@ -56,11 +56,22 @@ def main():
         for pp in path:
             print(path_finder.graph.edges[pp])
 
+    print("=" * 100)
+    print("Active path: 192.168.1.1 to 192.168.2.3")
+    path4 = path_finder.active_by_manage_ip('192.168.1.1', '192.168.2.3')
+    pprint.pprint(path4)
+
+    for path in map(nx.utils.pairwise, path4):
+        for pp in path:
+            print(path_finder.graph.edges[pp])
+
+    # TODO highest bandwidth, lowest bandwidth [Ava, link]
+
 
 if __name__ == '__main__':
     import logging
     import timeit
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     usage_time = timeit.timeit(main, number=1)
     print("Usage time: {:.3f}".format(usage_time))

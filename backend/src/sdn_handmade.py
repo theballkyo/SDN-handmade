@@ -1,21 +1,20 @@
 """ SDN Handmade start class
 """
 import logging
+import threading
 import time
 from functools import reduce
+import multiprocessing
 
 from netmiko import ConnectHandler
 from netmiko.ssh_exception import NetMikoTimeoutException
-from helpers.path_finder import PathFinder
 
-import threading
-import gen_nb
+import generate_graph
 import gen_subnet
 import sdn_utils
 import services
-# import services.device_service.DeviceService
-# from services.device_service import DeviceService
 from database import get_mongodb
+from device import Device
 from netflow import NetflowWorker
 from snmp_worker import SNMPWorker
 
@@ -23,174 +22,6 @@ from snmp_worker import SNMPWorker
 class Route:
     def __init__(self):
         pass
-
-
-class Device:
-    """ Device object
-    """
-
-    STATUS_OFFLINE = 0
-    STATUS_ONLINE = 1
-    STATUS_MARK_OFFLINE = 2
-    STATUS_SNMP_WORKING = 3
-
-    DEVICE_STATUS = (
-        (STATUS_OFFLINE, 'Offline'),
-        (STATUS_ONLINE, 'Online'),
-        (STATUS_MARK_OFFLINE, 'Mark offline'),
-        (STATUS_SNMP_WORKING, 'SNMP Working'),
-    )
-
-    def __init__(self, device_info, ssh_info, snmp_info):
-        self.ip = device_info['ip']
-        self.ssh_info = ssh_info
-        self.ssh_info['ip'] = self.ip
-        self.snmp_info = snmp_info
-        self.snmp_community = snmp_info['community']
-        self.snmp_port = snmp_info['port']
-        self.type = 'device'
-
-        # Default status
-        self.status = self.STATUS_OFFLINE
-
-        self.info = {}
-
-        self.neighbor = []
-        self.route = []
-        self.subnets = {}
-
-        self.mongo = get_mongodb()
-
-    def fork(self):
-        self.mongo = get_mongodb()
-
-    def update_info(self):
-        self.mongo.device.update_one({
-            'device_ip': self.ip
-        }, {
-            '$set': self.info
-        })
-
-    def set_status(self, status):
-        """ Set device status """
-        verify = False
-        for _status in self.DEVICE_STATUS:
-            if _status[0] == status:
-                verify = True
-                break
-
-        if not verify:
-            logging.info("Can't find device status ID {}", status)
-            return
-
-        self.init_device()
-        self.info['status'] = status
-        # Reset mark offline count
-        if status == self.STATUS_ONLINE:
-            self.info['mark_offline_count'] = 0
-        self.update_info()
-
-    def mark_offline(self):
-        self.init_device()
-        if self.info['mark_offline_count'] > 3:
-            pass
-        self.mongo.device.update_one({'device_ip': self.ip}, {'$inc', {'mark_offline_count': 1}})
-
-    def get_status(self):
-        self.init_device()
-        return self.info['status']
-
-    def init_device(self):
-        """ Initialize device
-        """
-        info = self.mongo.device.find_one({
-            'device_ip': self.ip
-        })
-
-        if info is None:
-            self.mongo.device.insert_one({
-                'device_ip': self.ip,
-                'status': self.STATUS_OFFLINE,
-                'mark_offline_count': 0
-            })
-
-            info = self.mongo.device.find_one({
-                'device_ip': self.ip
-            })
-
-        self.info = info
-
-    def query(self, field, default=None):
-        self.init_device()
-        return self.info.get(field, default)
-
-    def get_name(self):
-        """ Get device name
-        """
-        return self.query('name', 'Unknown')
-
-    def get_interfaces(self):
-        """ Get interfaces of device
-        """
-        return self.query('interfaces', [])
-
-    def get_info(self):
-        self.init_device()
-        return self.info
-
-    def get_cdp(self):
-        return self.mongo.cdp.find_one({'device_ip': self.ip})
-
-    def find_neighbor_by_name(self, name):
-        """ Find neighbor by device name
-            and return Device object
-        """
-        for device in self.neighbor:
-            if device.get_name() == name:
-                return device
-        return None
-
-    def find_neighbor(self, other_device):
-        """ Find neighbor by device name
-            and return Device object
-        """
-        for link_info in self.neighbor:
-            if other_device == link_info['neighbor_obj']:
-                return link_info
-        return None
-
-    def get_routes(self):
-        """ Get routes
-        """
-        self.init_device()
-        self.route = self.mongo.route.find({'device_ip': self.ip}).sort([
-            ('ipCidrRouteDest', self.mongo.pymongo.ASCENDING),
-            ('ipCidrRouteMask', self.mongo.pymongo.DESCENDING)
-        ])
-
-        return self.route
-
-    def uptime(self):
-        _time = self.query('uptime')
-        if not _time:
-            return "Down"
-        return sdn_utils.millis_to_datetime(_time * 10)
-
-    def infomation_text(self):
-        """ Display device infomation
-        """
-        self.init_device()
-        return "{} ({}) uptime - {}".format(self.get_name(),
-                                            self.ip,
-                                            self.uptime())
-
-    def __repr__(self):
-        self.init_device()
-        return "{}".format(self.get_name())
-
-    def __str__(self):
-        self.init_device()
-        return "{}".format(self.get_name())
 
 
 class Router(Device):
@@ -566,7 +397,7 @@ class Topology:
         """ Create graph
         """
         devices = self.device_service.get_active()
-        return gen_nb.create_networkx_graph(devices)
+        return generate_graph.create_networkx_graph(devices)
         # return get_neighbor()
 
     def create_subnet(self):
@@ -676,7 +507,7 @@ class Topology:
     def print_matrix(self):
         """ Print matrix of devices
         """
-        gen_nb.print_matrix(self.devices)
+        generate_graph.print_matrix(self.devices)
 
     def print_status(self):
         """ Print status of topoloygy

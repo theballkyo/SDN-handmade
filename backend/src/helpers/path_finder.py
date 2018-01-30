@@ -1,4 +1,4 @@
-import gen_nb
+import generate_graph
 import services
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -23,7 +23,7 @@ class PathFinder:
         """
         devices = services.device_service.get_all()
         # print(services.device_service.get_active().count())
-        self.graph = gen_nb.create_networkx_graph(devices)
+        self.graph = generate_graph.create_networkx_graph(devices)
 
     def active_by_subnet(self, src_subnet, dst_subnet):
         if self.auto_update_graph:

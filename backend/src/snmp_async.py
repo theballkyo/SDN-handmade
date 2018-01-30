@@ -5,6 +5,7 @@ from pyasn1.type.univ import Null
 from pysnmp.hlapi.asyncio import *
 from pysnmp.hlapi.varbinds import *
 from pysnmp.proto.rfc1905 import endOfMibView
+import pprint
 
 import sdn_utils
 
@@ -24,7 +25,7 @@ def to_value(rfc1902_object):
     return rfc1902_object.prettyPrint()
 
 
-async def get(host, community, port, oid_list, max_repetitions=16):
+async def get(host, community, port, oid_list, max_repetitions=16, extras=None):
     oid_name = tuple(oid_list.keys())
     var_binds = tuple(oid_list.values())
     data = []
@@ -34,6 +35,8 @@ async def get(host, community, port, oid_list, max_repetitions=16):
     null_var_binds = [False] * len(var_binds)
     lexicographic_mode = False
     stop_flag = False
+    if not extras:
+        extras = {}
 
     while not stop_flag:
         (error_indication,
@@ -85,8 +88,21 @@ async def get(host, community, port, oid_list, max_repetitions=16):
                         var_bind = var_bind_table[row][col]
                         # if oid_name[col]:
                         context[oid_name[col]] = to_value(var_bind[1])
-                        # else:
-                        #     context[str(var_bind[0].getOid())] = to_value(var_bind[1])
+
+                        # Add extras field
+                        cursor_extra = extras.get(oid_name[col])
+                        if cursor_extra:
+                            for extra in cursor_extra:
+                                if extra.get('field_name') and extra.get('type'):
+                                    extra_type = extra.get('type')
+                                    if extra_type == 'add_index':
+                                        start_oid = str(oid_list[oid_name[col]][0])
+                                        current_oid = str(var_bind[0].getOid())
+                                        index = current_oid.replace(start_oid, '').split('.')
+                                        # Use index[1] because when split index[0] == '.'
+                                        context[extra['field_name']] = extra['field_type'](index[1])
+                                    else:
+                                        logging.warning("extra type: %s can't not found", extra_type)
 
                 if len(context) > 0:
                     # print(context)
@@ -203,7 +219,17 @@ async def get_cdp(host, community, port=161):
         'port': ObjectType(ObjectIdentity('1.3.6.1.4.1.9.9.23.1.2.1.1.7')),
     }
 
-    data = await get(host, community, port, object_types)
+    extras = {
+        'port': [
+            {
+                'type': 'add_index',
+                'field_name': 'local_ifindex',
+                'field_type': int
+            }
+        ]
+    }
+
+    data = await get(host, community, port, object_types, extras=extras)
 
     if data is None or len(data) == 0:
         return None

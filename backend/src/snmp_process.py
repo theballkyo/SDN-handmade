@@ -92,15 +92,15 @@ async def process_system(host, community, port):
 
                     interface['bw_usage_update'] = time.time()
 
-                    logging.debug(
-                        ' || BW in usage %.3f%% || %d bytes',
-                        bw_in_usage_percent,
-                        in_octets)
-
-                    logging.debug(
-                        ' || BW out usage %.3f%% || %d bytes',
-                        bw_out_usage_percent,
-                        out_octets)
+                    # logging.debug(
+                    #     ' || BW in usage %.3f%% || %d bytes',
+                    #     bw_in_usage_percent,
+                    #     in_octets)
+                    #
+                    # logging.debug(
+                    #     ' || BW out usage %.3f%% || %d bytes',
+                    #     bw_out_usage_percent,
+                    #     out_octets)
                     break
 
     system_info['interfaces'] = interfaces

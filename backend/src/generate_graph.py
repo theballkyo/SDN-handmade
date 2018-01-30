@@ -31,6 +31,7 @@ def create_networkx_graph(devices):
         # logging.debug(cdp)
         if cdp is not None:
             cdp_neighbor = cdp.get('neighbor')
+            current_device = device_service.get_device(src_device['management_ip'])
             for neighbor in cdp_neighbor:
                 # check device is exist in topology
                 # If not continue to next cdp device
@@ -40,10 +41,12 @@ def create_networkx_graph(devices):
                     continue
 
                 if_index = -1
+                neighbor_if_speed = 0
                 for neighbor_interface in neighbor_device.get('interfaces'):
                     # Default is -1, -2 because if no IP is not match
                     if neighbor_interface.get('ipv4_address', -1) == neighbor.get('ip_addr', -2):
                         if_index = neighbor_interface['index']
+                        neighbor_if_speed = neighbor_interface['speed']
                         break
 
                 # Don't have neighbor
@@ -51,28 +54,34 @@ def create_networkx_graph(devices):
                     logging.debug('2: none')
                     continue
 
-                print("Added edge: " + src_device['management_ip'] + " - " + neighbor_device['management_ip'])
+                src_ip = ''
+                src_port = ''
+                if_speed = 0
+                current_if_speed = 0
+                for interface in current_device['interfaces']:
+                    if interface.get('index') == neighbor['local_ifindex']:
+                        src_ip = interface.get('ipv4_address')
+                        src_port = interface.get('description')
+                        if_speed = min(neighbor_if_speed, interface.get('speed'))
+                        current_if_speed = interface.get('speed')
+                        break
+
+                logging.debug("Added edge: " + src_device['management_ip'] + " - " + neighbor_device[
+                    'management_ip'] + " nb speed: " + str(neighbor_if_speed) + " my speed: " + str(
+                    current_if_speed) + " src_ip: " + src_ip + " src_port: " + src_port)
                 networkx.add_edge(
                     src_device['management_ip'],
                     neighbor_device['management_ip'],
-                    # src=src_device['management_ip'],
-                    # dst=neighbor_device['management_ip'],
+                    src_ip=src_ip,
+                    src_port=src_port,
                     dst_ip=neighbor['ip_addr'],
-                    dst_port=neighbor['port']
+                    dst_port=neighbor['port'],
+                    link_min_speed=if_speed
                 )
-
-                # neighbor_info = {
-                #     "neighbor_ip": neighbor['ip_addr'],
-                #     # "neighbor_if_index": n4,
-                #     "neighbor_obj": neighbor_device,
-                #     "ip": devices[n1].ip,
-                #     "if_index": if_index,
-                #     "port": neighbor['port']
-                # }
         else:
             # TODO
             pass
-    logging.debug(networkx.edges)
+    # logging.debug(networkx.edges)
     return networkx
 
 

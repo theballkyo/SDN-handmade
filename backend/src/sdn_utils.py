@@ -3,12 +3,12 @@ import struct
 import socket
 import logging
 from database import get_mongodb
-import sdn_handmade
+
 
 def hex_to_string(str_hex):
     if str_hex.startswith('0x'):
         str_hex = str_hex[2::]
-        return ''.join(chr(int(str_hex[i:i+2], 16)) for i in range(0, len(str_hex), 2))
+        return ''.join(chr(int(str_hex[i:i + 2], 16)) for i in range(0, len(str_hex), 2))
     return str_hex
 
 
@@ -20,16 +20,20 @@ def hex_to_ip(ip_hex):
     except ValueError:
         return None
 
+
 def millis_to_datetime(millis):
-    return datetime.timedelta(seconds=millis//1000)
+    return datetime.timedelta(seconds=millis // 1000)
+
 
 def seconds_to_datetime(seconds):
     return datetime.timedelta(seconds=seconds)
+
 
 def unix_to_datetime(unix_time):
     # if not isinstance(unix_time, int):
     #     raise ValueError('Unix time must be integer only.')
     return datetime.datetime.fromtimestamp(unix_time)
+
 
 def cal_bw_usage_percent(octets, if_speed, in_time):
     """ Calculate bandwidth usage
@@ -39,11 +43,13 @@ def cal_bw_usage_percent(octets, if_speed, in_time):
     in_time = in_time / 10
     return ((octets * 8 * 100) / (in_time * if_speed))
 
+
 def subnet_mask_to_wildcard_mask(subnet_mask):
     """ Convert subnet mask to wildcard mask
     """
     subnet = subnet_mask.split('.')
     return ".".join([~x & 0xff for x in subnet])
+
 
 def is_int(val):
     try:
@@ -51,6 +57,7 @@ def is_int(val):
         return True
     except ValueError:
         return False
+
 
 # def calculate_bw_usage_byte(octets, if_speed, in_time):
 #     """Calculate bandwidth usage
@@ -129,4 +136,5 @@ def generate_flow_command(flow, action, current_action):
     else:
         rmap_3 = ''
 
-    return [acl_command0, acl_command1, acl_command2, acl_command3, acl_command4, acl_command5, rmap_1, rmap_2, rmap_21, rmap_3]
+    return [acl_command0, acl_command1, acl_command2, acl_command3, acl_command4, acl_command5, rmap_1, rmap_2, rmap_21,
+            rmap_3]

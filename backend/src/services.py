@@ -1,5 +1,6 @@
 from database import get_mongodb
 import os
+import time
 
 
 class Service:
@@ -43,7 +44,7 @@ class DeviceService(Service):
 
     def get_device(self, management_ip):
         """ Get device object """
-        return self.device.find({'management_ip': management_ip})
+        return self.device.find_one({'management_ip': management_ip})
 
     def get_active(self):
         """ Get devices is active """
@@ -52,9 +53,12 @@ class DeviceService(Service):
     def get_all(self):
         return self.device.find()
 
-    def get_by_snmp_is_running(self, is_running):
+    def get_by_snmp_can_run(self, delay):
         return self.device.find({
-            'snmp_is_running': is_running
+            'snmp_is_running': False,
+            'snmp_last_run_time': {
+                '$lte': time.time() - delay
+            }
         })
 
     def set_snmp_running(self, management_ip, is_running):
@@ -63,6 +67,16 @@ class DeviceService(Service):
         }, {
             '$set': {
                 'snmp_is_running': is_running
+            }
+        })
+
+    def set_snmp_finish_running(self, management_ip):
+        self.device.update_one({
+            'management_ip': management_ip
+        }, {
+            '$set': {
+                'snmp_is_running': False,
+                'snmp_last_run_time': time.time()
             }
         })
 
@@ -100,13 +114,24 @@ class DeviceService(Service):
             '$set': device
         }, upsert=True)
 
+    def increase_offline_count(self, management_ip):
+        """ Update offline count by increase by 1
+        """
+        self.device.update_one({
+            'management_ip': management_ip
+        }, {
+            '$inc': {
+                'mark_offline_count': 1
+            }
+        })
+
     def remove(self, management_ip):
         """ Remove device """
         self.device.remove({'management_ip': management_ip})
 
 
 class RouteService(Service):
-    ipCidrRouteType = {
+    route_type = {
         'other': 1,
         'reject': 2,
         'local': 3,
@@ -118,7 +143,7 @@ class RouteService(Service):
         self.route = self.db.route
 
     def find_by_device(self, management_ip):
-        # Todo fix devie_ip to management_ip
+        # Todo fix device_ip to management_ip
         return self.route.find({'device_ip': management_ip})
 
     def find_by_network(self, network, mask, route_type=None):
@@ -137,7 +162,7 @@ class RouteService(Service):
         return route
 
     def find_by_type_is_local(self, network, mask):
-        return self.find_by_network(network, mask, self.ipCidrRouteType['local'])
+        return self.find_by_network(network, mask, self.route_type['local'])
 
 
 _cache = {
