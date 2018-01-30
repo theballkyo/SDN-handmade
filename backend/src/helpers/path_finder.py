@@ -6,6 +6,7 @@ import matplotlib.image as mpimg
 from PIL import Image
 import time
 import netaddr
+import logging
 
 
 class PathFinder:
@@ -89,6 +90,54 @@ class PathFinder:
         path = nx.shortest_path(self.graph, src_ip, dst_ip)
         return path
 
+    def _by_speed(self, src_ip, dst_ip, select_by):
+        """
+        Find path(s) is interface speed by selector lowest or highest
+        :param src_ip:
+        :param dst_ip:
+        :return:
+        """
+        if select_by not in ('highest', 'lowest'):
+            logging.warning("select_by arg can be only (highest or lowest)")
+            return []
+        all_paths = self.all_by_manage_ip(src_ip, dst_ip)
+        paths = []
+        last_bandwidth = None
+        for path in all_paths:
+            path_bandwidth = None
+            for i in range(len(path) - 1):
+                try:
+                    edge = self.graph.edges[(path[i], path[i + 1])]
+                    if path_bandwidth is None:
+                        path_bandwidth = edge['link_min_speed']
+                    path_bandwidth = min(path_bandwidth, edge['link_min_speed'])
+                except ValueError:
+                    pass
+            if last_bandwidth is None:
+                last_bandwidth = path_bandwidth
+            print(path_bandwidth, last_bandwidth)
+
+            if path_bandwidth > last_bandwidth:
+                # Find new higher bandwidth. Clear old paths
+                if select_by == 'highest':
+                    paths = list()
+                    paths.append(path)
+            elif path_bandwidth < last_bandwidth:
+                if select_by == 'lowest':
+                    paths = list()
+                    paths.append(path)
+            else:
+                paths.append(path)
+
+            last_bandwidth = path_bandwidth
+        return paths
+
+    def highest_speed(self, src_ip, dst_ip):
+        return self._by_speed(src_ip, dst_ip, 'highest')
+
+    def lowest_speed(self, src_ip, dst_ip):
+        return self._by_speed(src_ip, dst_ip, 'lowest')
+
     def all_by_manage_ip(self, src_ip, dst_ip):
         """
         Find best path by management IP
@@ -129,7 +178,7 @@ class PathFinder:
         plt.rcParams["figure.figsize"] = figsize
         # Include edge labels
         if labels:
-            nx.draw_networkx_edge_labels(self.graph)
+            nx.draw_networkx_edge_labels(self.graph, pos=layouts[layout](self.graph))
 
         # nx.draw_circular(self.graph, with_labels=True)
         nx.draw(self.graph, pos=layouts[layout](self.graph), with_labels=True)

@@ -65,6 +65,16 @@ def main():
         for pp in path:
             print(path_finder.graph.edges[pp])
 
+    print("=" * 100)
+    print("highest speed path: 192.168.1.1 to 192.168.1.13")
+    path5 = path_finder.highest_speed('192.168.1.1', '192.168.1.13')
+    pprint.pprint(path5)
+
+    print("=" * 100)
+    print("lowest speed path: 192.168.1.1 to 192.168.1.13")
+    path6 = path_finder.lowest_speed('192.168.1.1', '192.168.1.13')
+    pprint.pprint(path6)
+
     # TODO highest bandwidth, lowest bandwidth [Ava, link]
 
 
