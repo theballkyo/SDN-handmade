@@ -1,4 +1,5 @@
 import copy
+import netaddr
 import ipcalc
 import logging
 from graphs import Graph
@@ -54,17 +55,31 @@ def create_networkx_graph(devices):
                     logging.debug('2: none')
                     continue
 
-                src_ip = ''
-                src_port = ''
                 if_speed = 0
                 current_if_speed = 0
+                can_find_interface = False
                 for interface in current_device['interfaces']:
                     if interface.get('index') == neighbor['local_ifindex']:
-                        src_ip = interface.get('ipv4_address')
-                        src_port = interface.get('description')
+                        current_ip = interface.get('ipv4_address')
+                        current_port = interface.get('description')
                         if_speed = min(neighbor_if_speed, interface.get('speed'))
                         current_if_speed = interface.get('speed')
+                        can_find_interface = True
                         break
+
+                if not can_find_interface:
+                    raise ValueError("Can't find current device interface ip %s" % src_device['management_ip'])
+
+                if netaddr.IPAddress(current_ip) < netaddr.IPAddress(neighbor['ip_addr']):
+                    src_ip = current_ip
+                    src_port = current_port
+                    dst_ip = neighbor['ip_addr']
+                    dst_port = neighbor['port']
+                else:
+                    dst_ip = current_ip
+                    dst_port = current_port
+                    src_ip = neighbor['ip_addr']
+                    src_port = neighbor['port']
 
                 logging.debug("Added edge: " + src_device['management_ip'] + " - " + neighbor_device[
                     'management_ip'] + " nb speed: " + str(neighbor_if_speed) + " my speed: " + str(
@@ -74,8 +89,8 @@ def create_networkx_graph(devices):
                     neighbor_device['management_ip'],
                     src_ip=src_ip,
                     src_port=src_port,
-                    dst_ip=neighbor['ip_addr'],
-                    dst_port=neighbor['port'],
+                    dst_ip=dst_ip,
+                    dst_port=dst_port,
                     link_min_speed=if_speed
                 )
         else:
