@@ -5,7 +5,7 @@ matplotlib.use('Agg')
 
 
 def main():
-    from helpers.path_finder import PathFinder
+    from tools.path_finder import PathFinder
     import pprint
     import services
 
