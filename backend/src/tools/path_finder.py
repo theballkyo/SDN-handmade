@@ -39,6 +39,9 @@ class PathFinder:
         # It automatically update graph when get a path
         self.auto_update_graph = auto_update_graph
 
+        # Cache Simple path
+        self._all_simple_paths = None
+
     def update_graph(self):
         """ Use for update NetworkX graph object
         """
@@ -172,8 +175,10 @@ class PathFinder:
         """
         if self.auto_update_graph:
             self.update_graph()
-
-        return nx.all_simple_paths(self.graph, src_ip, dst_ip)
+        if self._all_simple_paths is None:
+            self._all_simple_paths = nx.all_simple_paths(self.graph, src_ip, dst_ip)
+            
+        return self._all_simple_paths
 
     def find_by_available_bandwidth(self, src_ip, dst_ip, select_by, bw_type):
         """
