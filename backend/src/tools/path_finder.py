@@ -41,6 +41,8 @@ class PathFinder:
 
         # Cache Simple path
         self._all_simple_paths = {}
+        # Cache link information
+        self.link_cache = {}
 
     def update_graph(self):
         """ Use for update NetworkX graph object
@@ -49,6 +51,8 @@ class PathFinder:
         # print(services.device_service.get_active().count())
         try:
             self.graph = generate_graph.create_networkx_graph(devices)
+            self._all_simple_paths = {}
+            self.link_cache = {}
         except ValueError as e:
             # Create empty graph
             print(e)
@@ -175,10 +179,13 @@ class PathFinder:
         """
         if self.auto_update_graph:
             self.update_graph()
-        if not self._all_simple_paths.get(src_ip + dst_ip):
-            self._all_simple_paths[src_ip + dst_ip] = nx.all_simple_paths(self.graph, src_ip, dst_ip)
-
-        return self._all_simple_paths[src_ip + dst_ip]
+        # print(self._all_simple_paths)
+        if not self._all_simple_paths.get(src_ip + dst_ip, False):
+            self._all_simple_paths[src_ip + dst_ip] = list(nx.all_simple_paths(self.graph, src_ip, dst_ip))
+        # print(self._all_simple_paths[src_ip + dst_ip])
+        return self._all_simple_paths[src_ip + dst_ip][:]
+        # print(list(nx.all_simple_paths(self.graph, src_ip, dst_ip)))
+        # return nx.all_simple_paths(self.graph, src_ip, dst_ip)
 
     def find_by_available_bandwidth(self, src_ip, dst_ip, select_by, bw_type):
         """
@@ -199,14 +206,13 @@ class PathFinder:
         all_paths = self.all_by_manage_ip(src_ip, dst_ip)
         paths = []
         last_bandwidth = None
-        link_cache = {}
         for path in all_paths:
             path_bandwidth = None
             for i in range(len(path) - 1):
                 try:
                     edge = self.graph.edges[(path[i], path[i + 1])]
                     # Check is exist in link_cache
-                    link = link_cache.get(edge['src_ip'])
+                    link = self.link_cache.get(edge['src_ip'])
                     if not link:
                         link = device_service.device.aggregate([
                             {
@@ -231,10 +237,14 @@ class PathFinder:
                             }
                         ])
 
+                        link = list(link)
                         # Cache link
-                        link_cache[edge['src_ip']] = link
+                        self.link_cache[edge['src_ip']] = link
 
-                    link_if = list(link)[0]['interfaces'][0]
+                    # Clone list object before use
+                    link = link[:]
+                    # pprint.pprint(link)
+                    link_if = link[0]['interfaces'][0]
                     in_bw = link_if['bw_in_usage_percent'] * link_if['speed']
                     out_bw = link_if['bw_out_usage_percent'] * link_if['speed']
 
