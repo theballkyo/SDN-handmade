@@ -29,7 +29,7 @@ node {
 
             stage('Test image') {
                 configFileProvider([configFile(fileId: 'sdn-settings-test', targetLocation: 'settings.py')]) {
-                    app.inside('-v ${pwd(tmp: true)}/settings.py:/data/settings.py') {
+                    app.inside('-v $(pwd)/settings.py:/data/settings.py') {
                         sh 'python test_find_path.py'
                     }
                 }
