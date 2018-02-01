@@ -23,17 +23,17 @@ def main():
 
     print(path_finder.graph.edges["192.168.1.2", "192.168.1.1"])
     # pprint.pprint(path_finder.graph)
-    path1 = path_finder.all_by_manage_ip("192.168.1.1", "192.168.1.10")
-    print("List 1")
+    path1 = path_finder.all_by_manage_ip("192.168.1.1", "192.168.1.13")
+    print("all_by_manage_ip 192.168.1.1 to 192.168.1.13")
     pprint.pprint(list(path1))
 
     print("=" * 100)
-    path2 = path_finder.shortest_by_manage_ip("192.168.1.1", "192.168.1.10")
-    print("List 2")
+    path2 = path_finder.shortest_by_manage_ip("192.168.1.1", "192.168.1.13")
+    print("shortest_by_manage_ip 192.168.1.1 to 192.168.1.13")
     pprint.pprint(list(path2))
 
     # path_finder.plot()
-    path_finder.save_graph_img()
+    # path_finder.save_graph_img()
 
     print("=" * 100)
     print("Active path: 192.168.1.1 to 192.168.1.13")
@@ -75,6 +75,42 @@ def main():
     path6 = path_finder.lowest_speed('192.168.1.1', '192.168.1.13')
     pprint.pprint(path6)
 
+    print("=" * 100)
+    print("find_by_available_bandwidth (highest, in): 192.168.1.1 to 192.168.1.13")
+    path7 = path_finder.find_by_available_bandwidth('192.168.1.1', '192.168.1.13', PathFinder.HIGHEST,
+                                                    PathFinder.BW_TYPE_IN)
+    pprint.pprint(path7)
+
+    print("=" * 100)
+    print("find_by_available_bandwidth (highest, out): 192.168.1.1 to 192.168.1.13")
+    path8 = path_finder.find_by_available_bandwidth('192.168.1.1', '192.168.1.13', PathFinder.HIGHEST,
+                                                    PathFinder.BW_TYPE_OUT)
+    pprint.pprint(path8)
+
+    print("=" * 100)
+    print("find_by_available_bandwidth (lowest, in): 192.168.1.1 to 192.168.1.13")
+    path9 = path_finder.find_by_available_bandwidth('192.168.1.1', '192.168.1.13', PathFinder.LOWEST,
+                                                    PathFinder.BW_TYPE_IN)
+    pprint.pprint(path9)
+
+    print("=" * 100)
+    print("find_by_available_bandwidth (lowest, out): 192.168.1.1 to 192.168.1.13")
+    path10 = path_finder.find_by_available_bandwidth('192.168.1.1', '192.168.1.13', PathFinder.LOWEST,
+                                                     PathFinder.BW_TYPE_OUT)
+    pprint.pprint(path10)
+
+    print("=" * 100)
+    print("find_by_available_bandwidth (lowest, lowest): 192.168.1.1 to 192.168.1.13")
+    path11 = path_finder.find_by_available_bandwidth('192.168.1.1', '192.168.1.13', PathFinder.LOWEST,
+                                                     PathFinder.BW_TYPE_LOWEST)
+    pprint.pprint(path11)
+
+    print("=" * 100)
+    print("find_by_available_bandwidth (lowest, highest): 192.168.1.1 to 192.168.1.13")
+    path12 = path_finder.find_by_available_bandwidth('192.168.1.1', '192.168.1.13', PathFinder.LOWEST,
+                                                     PathFinder.BW_TYPE_HIGHEST)
+    pprint.pprint(path12)
+
     # TODO highest bandwidth, lowest bandwidth [Ava, link]
 
 
@@ -82,6 +118,6 @@ if __name__ == '__main__':
     import logging
     import timeit
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     usage_time = timeit.timeit(main, number=1)
     print("Usage time: {:.3f}".format(usage_time))
