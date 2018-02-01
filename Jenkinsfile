@@ -2,6 +2,7 @@ node {
     def app
     def branch = env.BRANCH_NAME
     def test = "aaaa"
+    def mydata
 
     stage('Test before run') {
         sh "echo ${branch}"
@@ -28,8 +29,12 @@ node {
             }
 
             stage('Test image') {
-                configFileProvider([configFile(fileId: 'sdn-settings-test', targetLocation: 'settings.py')]) {
-                    app.inside('-v $(pwd)/settings.py:/data/settings.py') {
+                configFileProvider([configFile(fileId: 'sdn-settings-test', targetLocation: 'settings.py', variable: 'SDN_SETTINGS')]) {
+                    mydata = readFile encoding: 'utf-8', file: 'settings.py'
+                    app.inside('--network db') {
+                        sh "echo ${mydata} | base64 --decode > settings.py"
+                        echo "Testing settings file"
+                        sh "cat settings.py"
                         sh 'python test_find_path.py'
                     }
                 }
