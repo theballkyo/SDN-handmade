@@ -268,7 +268,6 @@ class PathFinder:
                     pass
             if last_bandwidth is None:
                 last_bandwidth = path_bandwidth
-            # print(path_bandwidth, last_bandwidth)
 
             if path_bandwidth > last_bandwidth:
                 # Find new higher bandwidth. Clear old paths
