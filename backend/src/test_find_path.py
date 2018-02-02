@@ -5,21 +5,7 @@ matplotlib.use('Agg')
 
 
 def main():
-    from tools.path_finder import PathFinder
-    import pprint
-    import services
-
-    device_service = services.get_service("device")
-    device_service.get_active()
-
-    device_service.device.find({})
-
-    route_service = services.get_service("route")
-    route_service.route.find()
-
     path_finder = PathFinder(auto_update_graph=False)
-
-    path_finder.graph.add_edge("192.168.1.1", "10.0.0.1")
 
     print(path_finder.graph.edges["192.168.1.2", "192.168.1.1"])
     # pprint.pprint(path_finder.graph)
@@ -117,6 +103,8 @@ def main():
 if __name__ == '__main__':
     import logging
     import timeit
+    from tools.path_finder import PathFinder
+    import pprint
 
     logging.basicConfig(level=logging.INFO)
     usage_time = timeit.timeit(main, number=1)
