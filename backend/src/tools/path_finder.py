@@ -1,13 +1,12 @@
+import logging
+import time
+
+import matplotlib.pyplot as plt
+import netaddr
+import networkx as nx
+
 import generate_graph
 import services
-import networkx as nx
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-from PIL import Image
-import time
-import netaddr
-import logging
-import pprint
 
 
 class PathFinder:
@@ -147,21 +146,22 @@ class PathFinder:
                     pass
             if last_bandwidth is None:
                 last_bandwidth = path_bandwidth
-            print(path_bandwidth, last_bandwidth)
+            logging.debug(path_bandwidth, last_bandwidth)
 
             if path_bandwidth > last_bandwidth:
                 # Find new higher bandwidth. Clear old paths
                 if select_by == self.HIGHEST:
                     paths = list()
                     paths.append(path)
+                    last_bandwidth = path_bandwidth
             elif path_bandwidth < last_bandwidth:
                 if select_by == self.LOWEST:
                     paths = list()
                     paths.append(path)
+                    last_bandwidth = path_bandwidth
             else:
                 paths.append(path)
 
-            last_bandwidth = path_bandwidth
         return paths
 
     def highest_speed(self, src_ip, dst_ip):
@@ -268,20 +268,21 @@ class PathFinder:
                     pass
             if last_bandwidth is None:
                 last_bandwidth = path_bandwidth
-
+            logging.debug("Path {} bandwidth is {:.2f}, {:.2f}".format(n, path, path_bandwidth, last_bandwidth))
             if path_bandwidth > last_bandwidth:
                 # Find new higher bandwidth. Clear old paths
                 if select_by == self.HIGHEST:
                     paths = list()
                     paths.append(path)
+                    last_bandwidth = path_bandwidth
             elif path_bandwidth < last_bandwidth:
                 if select_by == self.LOWEST:
                     paths = list()
                     paths.append(path)
+                    last_bandwidth = path_bandwidth
             else:
                 paths.append(path)
 
-            last_bandwidth = path_bandwidth
         return paths
 
     def plot(self):
