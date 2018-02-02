@@ -103,7 +103,7 @@ def main():
 if __name__ == '__main__':
     import logging
     import timeit
-    from tools.path_finder import PathFinder
+    from tools import PathFinder
     import pprint
 
     logging.basicConfig(level=logging.INFO)
