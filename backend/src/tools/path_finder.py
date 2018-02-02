@@ -268,7 +268,7 @@ class PathFinder:
                     pass
             if last_bandwidth is None:
                 last_bandwidth = path_bandwidth
-            logging.debug("Path {} bandwidth is {:.2f}, {:.2f}".format(n, path, path_bandwidth, last_bandwidth))
+            logging.debug("Path {} bandwidth is {:.2f}, {:.2f}".format(path, path_bandwidth, last_bandwidth))
             if path_bandwidth > last_bandwidth:
                 # Find new higher bandwidth. Clear old paths
                 if select_by == self.HIGHEST:
