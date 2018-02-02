@@ -43,9 +43,14 @@ node {
     }
 
     stage('Push docker image') {
-        docker.withRegistry('https://registry.ryoka.tk', 'docker-registry') {
-            // app.push("${env.BUILD_NUMBER}")
-            app.push()
+        if (branch == 'develop') {
+            docker.withRegistry('https://registry.ryoka.tk', 'docker-registry') {
+                app.push("develop")
+            }
+        } else if (branch == 'master') {
+            docker.withRegistry('https://registry.ryoka.tk', 'docker-registry') {
+                app.push()
+            }
         }
     }
     
