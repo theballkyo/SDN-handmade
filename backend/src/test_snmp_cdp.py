@@ -1,4 +1,4 @@
-import snmp_async
+from snmp import snmp_async
 import pprint
 import asyncio
 

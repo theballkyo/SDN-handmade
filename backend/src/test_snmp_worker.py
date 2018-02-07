@@ -1,4 +1,4 @@
-import snmp_worker
+from snmp import snmp_worker
 import multiprocessing as mp
 import logging
 import services

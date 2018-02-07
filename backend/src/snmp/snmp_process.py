@@ -1,10 +1,9 @@
 from netaddr import IPNetwork
 
-import snmp_async
+from snmp import snmp_async
 import services
 import sdn_utils
 import time
-import logging
 
 
 async def process_cdp(host, community, port):

@@ -12,7 +12,7 @@ import services
 from database import get_mongodb
 from device import Device
 from netflow import NetflowWorker
-from snmp_worker import SNMPWorker
+from snmp.snmp_worker import SNMPWorker
 
 
 class Router(Device):
