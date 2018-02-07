@@ -3,7 +3,7 @@ import socket
 # import struct
 # import sys
 # import readline
-from netflow_packet import ExportPacket
+from netflow.netflow_packet import ExportPacket
 from database import NetflowDB
 
 # HOST = sys.argv[1]

@@ -1,12 +1,9 @@
 import logging
-import multiprocessing
 import socket
-import socketserver
 import threading
-import time
 
 from database import get_mongodb
-from netflow_packet import ExportPacket
+from netflow.netflow_packet import ExportPacket
 
 
 class NetflowWorker(threading.Thread):

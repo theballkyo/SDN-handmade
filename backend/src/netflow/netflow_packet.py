@@ -1,6 +1,6 @@
 import struct
 import sdn_utils
-from netflow_types import FIELD_TYPES, fields_function, convert_to_ip
+from netflow.netflow_types import FIELD_TYPES, convert_to_ip
 
 class DataRecord:
     """This is a 'flow' as we want it from our source. What it contains is
