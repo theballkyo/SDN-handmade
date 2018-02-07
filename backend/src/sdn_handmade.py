@@ -504,11 +504,6 @@ class Topology:
         """
         return time.time() - self.__create_time
 
-    def print_matrix(self):
-        """ Print matrix of devices
-        """
-        generate_graph.print_matrix(self.devices)
-
     def print_status(self):
         """ Print status of topoloygy
         """
