@@ -13,6 +13,7 @@ class Subnet:
     def __str__(self):
         return self.network
 
+
 def create_subnet(devices, exclude_ips=None):
     """ Create subnet
     """
@@ -47,47 +48,7 @@ def create_subnet(devices, exclude_ips=None):
             }
             # print(network_str, subnets)
     return subnet_dict
-    # logging.debug(subnet_dict)
-    # for subnet in subnet_dict:
-    #     net = subnet_dict[subnet]
-    #     logging.debug("Subnet\t{}".format(subnet))
-    #     for n in net:
-    #         logging.debug("\tIP: {}\tDevice: {}".format(n['ip'], n['device_name']))
-    #
-    # # Matrix subnet
-    # subnet_matrix = []
-    # # print(subnet_dict)
-    #
-    # for src_subnets in subnet_dict:
-    #     for src_subnet in subnet_dict[src_subnets]:
-    #         for dst_subnets in subnet_dict:
-    #             for dst_subnet in subnet_dict[dst_subnets]:
-    #                 if src_subnet['ip'] == dst_subnet['ip'] and \
-    #                     src_subnets == dst_subnets:
-    #                     continue
-                    # print(src_subnets, dst_subnets)
-    # for subnet in subnet_dict:
-    #     matrix = {
-    #         'subnet': subnet,
-    #         'to': []
-    #     }
-    #     for subnet2 in subnet_dict:
-    #         if subnet == subnet2:
-    #             continue
-    #         # print(subnet, subnet2)
-    #         matrix['to'].append({
-    #             'subnet': subnet2,
-    #             'routes': [{
-    #                 # 'start_at': subnet_dict[subnet]['device'],
-    #                 'start_at': '...',
-    #                 'route': '1, 0, 1, 1, 1',
-    #                 'end_at': '...'
-    #                 # 'end_at': subnet_dict[subnet2]['device']
-    #             }],
-    #             # Extra infomation ....
-    #         })
-    #     subnet_matrix.append(matrix)
-    # print(subnet_matrix)
+
 
 if __name__ == '__main__':
     create_subnet(exclude_ips=[('192.168.106.0', '255.255.255.0')])
