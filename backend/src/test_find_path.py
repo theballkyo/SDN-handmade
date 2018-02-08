@@ -63,38 +63,62 @@ def main():
 
     print("=" * 100)
     print("find_by_available_bandwidth (highest, in): 192.168.1.1 to 192.168.1.13")
-    path7 = path_finder.find_by_available_bandwidth('192.168.1.1', '192.168.1.13', PathFinder.HIGHEST,
-                                                    PathFinder.BW_TYPE_IN)
+    path7 = path_finder.find_by_available_bandwidth(
+        '192.168.1.1',
+        '192.168.1.13',
+        PathFinder.SelectBy.HIGHEST,
+        PathFinder.LinkSide.IN
+    )
     pprint.pprint(path7)
 
     print("=" * 100)
     print("find_by_available_bandwidth (highest, out): 192.168.1.1 to 192.168.1.13")
-    path8 = path_finder.find_by_available_bandwidth('192.168.1.1', '192.168.1.13', PathFinder.HIGHEST,
-                                                    PathFinder.BW_TYPE_OUT)
+    path8 = path_finder.find_by_available_bandwidth(
+        '192.168.1.1',
+        '192.168.1.13',
+        PathFinder.SelectBy.HIGHEST,
+        PathFinder.LinkSide.OUT
+    )
     pprint.pprint(path8)
 
     print("=" * 100)
     print("find_by_available_bandwidth (lowest, in): 192.168.1.1 to 192.168.1.13")
-    path9 = path_finder.find_by_available_bandwidth('192.168.1.1', '192.168.1.13', PathFinder.LOWEST,
-                                                    PathFinder.BW_TYPE_IN)
+    path9 = path_finder.find_by_available_bandwidth(
+        '192.168.1.1',
+        '192.168.1.13',
+        PathFinder.SelectBy.LOWEST,
+        PathFinder.LinkSide.IN
+    )
     pprint.pprint(path9)
 
     print("=" * 100)
     print("find_by_available_bandwidth (lowest, out): 192.168.1.1 to 192.168.1.13")
-    path10 = path_finder.find_by_available_bandwidth('192.168.1.1', '192.168.1.13', PathFinder.LOWEST,
-                                                     PathFinder.BW_TYPE_OUT)
+    path10 = path_finder.find_by_available_bandwidth(
+        '192.168.1.1',
+        '192.168.1.13',
+        PathFinder.SelectBy.LOWEST,
+        PathFinder.LinkSide.OUT
+    )
     pprint.pprint(path10)
 
     print("=" * 100)
     print("find_by_available_bandwidth (lowest, lowest): 192.168.1.1 to 192.168.1.13")
-    path11 = path_finder.find_by_available_bandwidth('192.168.1.1', '192.168.1.13', PathFinder.LOWEST,
-                                                     PathFinder.BW_TYPE_LOWEST)
+    path11 = path_finder.find_by_available_bandwidth(
+        '192.168.1.1',
+        '192.168.1.13',
+        PathFinder.SelectBy.LOWEST,
+        PathFinder.LinkSide.LOWEST
+    )
     pprint.pprint(path11)
 
     print("=" * 100)
     print("find_by_available_bandwidth (lowest, highest): 192.168.1.1 to 192.168.1.13")
-    path12 = path_finder.find_by_available_bandwidth('192.168.1.1', '192.168.1.13', PathFinder.LOWEST,
-                                                     PathFinder.BW_TYPE_HIGHEST)
+    path12 = path_finder.find_by_available_bandwidth(
+        '192.168.1.1',
+        '192.168.1.13',
+        PathFinder.SelectBy.LOWEST,
+        PathFinder.LinkSide.HIGHEST
+    )
     pprint.pprint(path12)
 
     # TODO highest bandwidth, lowest bandwidth [Ava, link]

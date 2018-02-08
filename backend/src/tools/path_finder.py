@@ -8,26 +8,21 @@ import networkx as nx
 import generate_graph
 import services
 
+from enum import Enum, unique
+
 
 class PathFinder:
-    LOWEST = 'lo'
-    HIGHEST = 'hi'
+    @unique
+    class SelectBy(Enum):
+        LOWEST = 0
+        HIGHEST = 1
 
-    SELECT_BY_CHOICES = (
-        LOWEST,
-        HIGHEST
-    )
-
-    BW_TYPE_IN = 'bw_in'
-    BW_TYPE_OUT = 'bw_out'
-    BW_TYPE_LOWEST = 'bw_lowest'  # Select type is lower
-    BW_TYPE_HIGHEST = 'bw_highest'  # Select type is higher
-    BW_TYPE_CHOICES = (
-        BW_TYPE_IN,
-        BW_TYPE_OUT,
-        BW_TYPE_LOWEST,
-        BW_TYPE_HIGHEST
-    )
+    @unique
+    class LinkSide(Enum):
+        IN = 0
+        OUT = 1
+        LOWEST = 2
+        HIGHEST = 3
 
     def __init__(self, auto_update_graph=True):
         # Create NetworkX graph
@@ -128,8 +123,8 @@ class PathFinder:
         :param dst_ip:
         :return:
         """
-        if select_by not in self.SELECT_BY_CHOICES:
-            logging.warning("select_by arg can be only {}".format(self.SELECT_BY_CHOICES))
+        if select_by not in self.SelectBy:
+            logging.warning("select_by arg not in choices")
             return []
         all_paths = self.all_by_manage_ip(src_ip, dst_ip)
         paths = []
@@ -150,12 +145,12 @@ class PathFinder:
 
             if path_bandwidth > last_bandwidth:
                 # Find new higher bandwidth. Clear old paths
-                if select_by == self.HIGHEST:
+                if select_by == self.SelectBy.HIGHEST:
                     paths = list()
                     paths.append(path)
                     last_bandwidth = path_bandwidth
             elif path_bandwidth < last_bandwidth:
-                if select_by == self.LOWEST:
+                if select_by == self.SelectBy.LOWEST:
                     paths = list()
                     paths.append(path)
                     last_bandwidth = path_bandwidth
@@ -165,10 +160,10 @@ class PathFinder:
         return paths
 
     def highest_speed(self, src_ip, dst_ip):
-        return self._by_speed(src_ip, dst_ip, self.LOWEST)
+        return self._by_speed(src_ip, dst_ip, self.SelectBy.LOWEST)
 
     def lowest_speed(self, src_ip, dst_ip):
-        return self._by_speed(src_ip, dst_ip, self.HIGHEST)
+        return self._by_speed(src_ip, dst_ip, self.SelectBy.HIGHEST)
 
     def all_by_manage_ip(self, src_ip, dst_ip):
         """
@@ -187,19 +182,21 @@ class PathFinder:
         # print(list(nx.all_simple_paths(self.graph, src_ip, dst_ip)))
         # return nx.all_simple_paths(self.graph, src_ip, dst_ip)
 
-    def find_by_available_bandwidth(self, src_ip, dst_ip, select_by, bw_type):
+    def find_by_available_bandwidth(self, src_ip, dst_ip, select_by, link_side):
         """
         Find path(s) is interface speed by selector lowest or highest
         :param src_ip:
         :param dst_ip:
+        :param select_by:
+        :param link_side:
         :return:
         """
-        if select_by not in self.SELECT_BY_CHOICES:
-            logging.warning("select_by arg can be only {}".format(self.SELECT_BY_CHOICES))
+        if select_by not in self.SelectBy:
+            logging.warning("select_by arg not in choices")
             return []
 
-        if bw_type not in self.BW_TYPE_CHOICES:
-            logging.warning("bw_type arg can be only {}".format(self.SELECT_BY_CHOICES))
+        if link_side not in self.LinkSide:
+            logging.warning("link_side arg not in choices")
             return []
 
         device_service = services.get_service("device")
@@ -251,14 +248,14 @@ class PathFinder:
                     if path_bandwidth is None:
                         path_bandwidth = link_if['speed'] - in_bw
 
-                    if bw_type == self.BW_TYPE_IN:
+                    if link_side == self.LinkSide.IN:
                         bw = in_bw
-                    elif bw_type == self.BW_TYPE_OUT:
+                    elif link_side == self.LinkSide.OUT:
                         bw = out_bw
-                    elif bw_type == self.BW_TYPE_HIGHEST:
+                    elif link_side == self.LinkSide.HIGHEST:
                         # Select type is available is higher
                         bw = min(in_bw, out_bw)
-                    elif bw_type == self.BW_TYPE_LOWEST:
+                    elif link_side == self.LinkSide.LOWEST:
                         # Select type is available is lower
                         bw = max(in_bw, out_bw)
 
@@ -271,12 +268,12 @@ class PathFinder:
             logging.debug("Path {} bandwidth is {:.2f}, {:.2f}".format(path, path_bandwidth, last_bandwidth))
             if path_bandwidth > last_bandwidth:
                 # Find new higher bandwidth. Clear old paths
-                if select_by == self.HIGHEST:
+                if select_by == self.SelectBy.HIGHEST:
                     paths = list()
                     paths.append(path)
                     last_bandwidth = path_bandwidth
             elif path_bandwidth < last_bandwidth:
-                if select_by == self.LOWEST:
+                if select_by == self.SelectBy.LOWEST:
                     paths = list()
                     paths.append(path)
                     last_bandwidth = path_bandwidth
