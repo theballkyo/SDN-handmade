@@ -1,6 +1,16 @@
 import datetime
 import socket
 import struct
+import settings
+import os
+
+
+def get_snmp_num_worker():
+    num_worker = settings.snmp_worker.get('pool')
+    try:
+        num_worker = int(num_worker)
+    except ValueError:
+        num_worker = os.cpu_count()
 
 
 def hex_to_string(str_hex):

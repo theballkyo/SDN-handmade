@@ -7,6 +7,7 @@ from concurrent.futures import wait, ProcessPoolExecutor
 import services
 import settings
 from snmp import snmp_process
+import sdn_utils
 
 try:
     import uvloop
@@ -76,14 +77,7 @@ class SNMPWorker:
         logging.info("SNMP Worker: shutdown complete")
 
     def run(self):
-        num_worker = settings.snmp_worker.get('pool')
-        if num_worker is None or num_worker == 'auto':
-            num_worker = os.cpu_count()
-
-        try:
-            num_worker = int(num_worker)
-        except ValueError:
-            num_worker = os.cpu_count()
+        num_worker = sdn_utils.get_snmp_num_worker()
 
         executor = ProcessPoolExecutor(num_worker)
         device_service = services.get_service('device')
