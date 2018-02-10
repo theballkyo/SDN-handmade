@@ -16,5 +16,4 @@ RUN pip install -r requirements.txt
 
 COPY . /data
 
-ENTRYPOINT ["python"]
-CMD = ["main.py"]
+CMD = ["python", "main.py"]
