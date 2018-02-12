@@ -5,7 +5,9 @@ EXPOSE 23456
 # For APIs
 EXPOSE 8080
 
-RUN apt-get update && apt-get install -y gcc \
+RUN set -ex \
+    && apt-get update \
+    && apt-get install -y gcc \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /data

@@ -1,7 +1,7 @@
 pymongo==3.6.0
 pysnmp==4.4.4
 Pillow==5.0.0
-netmiko==2.0.1
+netmiko==2.0.2
 networkx==2.0
 Flask==0.12.2
 ipcalc==1.99.0
