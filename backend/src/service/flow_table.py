@@ -12,7 +12,7 @@ class FlowTableService(BaseService):
         if state not in FlowState:
             raise ValueError("Flow state: {} not in FlowState class".format(state))
 
-        flows = self.db.flow_table.find({'state': state})
+        flows = self.db.flow_table.find({'state': state.value})
 
         return flows
 
@@ -25,6 +25,6 @@ class FlowTableService(BaseService):
             logging.warning("Flow id: {} not exist !!!".format(flow_id))
             return True
 
-        self.db.flow_table.updateOne({'flow_id': flow_id}, {'$set': {'state': state}})
+        self.db.flow_table.updateOne({'flow_id': flow_id}, {'$set': {'state': state.value}})
 
         return True
