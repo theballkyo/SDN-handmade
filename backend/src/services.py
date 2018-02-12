@@ -88,6 +88,14 @@ class DeviceService(Service):
             return True
         return device.get('snmp_is_running', False)
 
+    def get_ssh_info(self, management_ip):
+        data = self.db.device.find_one({
+            'management_ip': management_ip
+        })
+        if data is None:
+            return None
+        return data['ssh_info']
+
     def find_by_if_ip(self, ip):
         """
         """
