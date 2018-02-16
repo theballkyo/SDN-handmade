@@ -35,7 +35,7 @@ node {
                         sh "echo ${mydata} | base64 --decode > settings.py"
                         echo "Testing settings file"
                         sh "cat settings.py"
-                        sh "export PYTHONPATH=$(pwd)"
+                        sh 'export PYTHONPATH=$(pwd)'
                         sh 'python tests/test_find_path.py'
                     }
                 }
