@@ -5,7 +5,7 @@ from services import get_service
 from router_command import generate_action_command, generate_flow_command
 
 
-class FlowWatchTask:
+class FlowTableWatchTask:
     def __init__(self):
         self.fts = FlowTableService()
         self.device_service = get_service('device')
