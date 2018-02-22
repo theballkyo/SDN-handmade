@@ -10,7 +10,9 @@ def main():
     for device in devices:
         device_service.set_snmp_running(device['management_ip'], False)
     worker = snmp_worker.SNMPWorker()
-    mp.Process(target=worker.run).start()
+    a = mp.Process(target=worker.run)
+    a.start()
+    a.join()
 
 
 if __name__ == '__main__':
