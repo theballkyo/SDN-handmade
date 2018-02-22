@@ -2,6 +2,7 @@ import struct
 import sdn_utils
 from netflow.netflow_types import FIELD_TYPES, convert_to_ip
 
+
 class DataRecord:
     """This is a 'flow' as we want it from our source. What it contains is
     variable in NetFlow V9, so to work with the data you have to analyze the
@@ -10,6 +11,7 @@ class DataRecord:
 
     Should hold a 'data' dict with keys=field_type (integer) and value (in bytes).
     """
+
     def __init__(self):
         self.data = {}
 
@@ -22,7 +24,8 @@ class DataFlowSet:
     template. This template is referenced in the field 'flowset_id' of this
     DataFlowSet and must not be zero.
     """
-    def __init__(self, data, templates, timestamp):
+
+    def __init__(self, data, templates, header):
         pack = struct.unpack('!HH', data[:4])
 
         self.template_id = pack[0]  # flowset_id is reference to a template_id
@@ -44,7 +47,7 @@ class DataFlowSet:
                 fdata = None
 
                 # The length of the value byte slice is defined in the template
-                dataslice = data[offset:offset+flen]
+                dataslice = data[offset:offset + flen]
 
                 # Better solution than struct.unpack with variable field length
                 fdata = 0
@@ -55,11 +58,11 @@ class DataFlowSet:
                     fdata = convert_to_ip(fdata)
 
                 if field.field_type in (21, 22):
-                    # print('1111111')
                     fdata = int(fdata)
-                    fdata = ((timestamp * 1000.0) - fdata) / 1000.0
+                    fdata = ((header.timestamp * 1000.0) - header.uptime) + fdata
+                    # Convert to second
+                    fdata /= 1000
                     fdata = sdn_utils.unix_to_datetime(fdata)
-                    # print(fdata)
 
                 new_record.data[fkey] = fdata
 
@@ -68,13 +71,14 @@ class DataFlowSet:
             self.flows.append(new_record)
 
     def __repr__(self):
-        return "<DataFlowSet with template {} of length {} holding {} flows>"\
+        return "<DataFlowSet with template {} of length {} holding {} flows>" \
             .format(self.template_id, self.length, len(self.flows))
 
 
 class TemplateField:
     """A field with type identifier and length.
     """
+
     def __init__(self, field_type, field_length):
         self.field_type = field_type  # integer
         self.field_length = field_length  # bytes
@@ -87,6 +91,7 @@ class TemplateField:
 class TemplateRecord:
     """A template record contained in a TemplateFlowSet.
     """
+
     def __init__(self, template_id, field_count, fields):
         self.template_id = template_id
         self.field_count = field_count
@@ -104,6 +109,7 @@ class TemplateFlowSet:
     identifiers of data types (eg "IP_SRC_ADDR", "PKTS"..). This way the flow
     sender can dynamically put together data flowsets.
     """
+
     def __init__(self, data):
         pack = struct.unpack('!HH', data[:4])
         self.flowset_id = pack[0]
@@ -114,7 +120,7 @@ class TemplateFlowSet:
 
         # Iterate through all template records in this template flowset
         while offset != self.length:
-            pack = struct.unpack('!HH', data[offset:offset+4])
+            pack = struct.unpack('!HH', data[offset:offset + 4])
             template_id = pack[0]
             field_count = pack[1]
 
@@ -122,7 +128,7 @@ class TemplateFlowSet:
             for field in range(field_count):
                 # Get all fields of this template
                 offset += 4
-                field_type, field_length = struct.unpack('!HH', data[offset:offset+4])
+                field_type, field_length = struct.unpack('!HH', data[offset:offset + 4])
                 field = TemplateField(field_type, field_length)
                 fields.append(field)
 
@@ -136,20 +142,21 @@ class TemplateFlowSet:
             offset += 4
 
     def __repr__(self):
-        return "<TemplateFlowSet with id {} of length {} containing templates: {}>"\
+        return "<TemplateFlowSet with id {} of length {} containing templates: {}>" \
             .format(self.flowset_id, self.length, self.templates.keys())
 
 
 class Header:
     """The header of the ExportPacket.
     """
+
     def __init__(self, data):
         pack = struct.unpack('!HHIIII', data[:20])
 
         self.version = pack[0]
         self.count = pack[1]  # not sure if correct. softflowd: no of flows
         self.uptime = pack[2]
-        self.timestamp = pack[3]
+        self.timestamp = pack[3]  # UNIX Seconds
         self.sequence = pack[4]
         self.source_id = pack[5]
 
@@ -157,6 +164,7 @@ class Header:
 class ExportPacket:
     """The flow record holds the header and all template and data flowsets.
     """
+
     def __init__(self, data, templates):
         self.header = Header(data)
         # print(self.header.uptime, self.header.timestamp)
@@ -165,13 +173,13 @@ class ExportPacket:
 
         offset = 20
         while offset != len(data):
-            flowset_id = struct.unpack('!H', data[offset:offset+2])[0]
+            flowset_id = struct.unpack('!H', data[offset:offset + 2])[0]
             if flowset_id == 0:  # TemplateFlowSet always have id 0
                 tfs = TemplateFlowSet(data[offset:])
                 self.templates.update(tfs.templates)
                 offset += tfs.length
             else:
-                dfs = DataFlowSet(data[offset:], self.templates, self.header.timestamp)
+                dfs = DataFlowSet(data[offset:], self.templates, self.header)
                 self.flows += dfs.flows
                 offset += dfs.length
 
