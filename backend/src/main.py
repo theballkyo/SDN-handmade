@@ -1,6 +1,7 @@
 """ SDN Handmade for legacy Cisco device """
 import matplotlib
 import os
+import logging
 
 
 def main():
@@ -55,9 +56,11 @@ def main():
 if __name__ == '__main__':
     # Fix when draw image in terminal without display
     matplotlib.use('Agg')
-    # FORMAT = '%(asctime)-15s - %(name)s - %(message)s'
-    # logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
-    #                     format=FORMAT)
+    # format = '[%(levelname)s] (%(threadName)-10s) %(message)s'
+    FORMAT = '%(asctime)-15s [%(levelname)s] (%(threadName)-10s) %(message)s'
+    logging.basicConfig(level=logging.DEBUG,
+                        format=FORMAT)
+
     if os.name == 'nt':
         print("Warning: Windows is not fully support.")
     main()
