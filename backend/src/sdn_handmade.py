@@ -165,12 +165,17 @@ class Topology:
         logging.info("Create topology")
 
     def init(self):
-        if self.mongo.flow_seq.find_one() is None:
-            for i in range(0, 65535):
-                self.mongo.flow_seq.insert_one({
-                    'number': i,
-                    'in_use': False
-                })
+        from pymongo import UpdateOne
+        # if self.mongo.flow_seq.find_one() is None:
+        op = []
+        for i in range(0, 65535):
+            op.append(
+                UpdateOne({'_id': i}, {'$setOnInsert': {'in_use': False}}, upsert=True)
+            )
+        try:
+            self.mongo.flow_seq.bulk_write(op)
+        except Exception as e:
+            print(e)
 
     def run(self):
         """ Start topology loop
