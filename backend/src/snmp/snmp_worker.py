@@ -1,19 +1,17 @@
 import asyncio
 import logging
-import os
 import time
 from concurrent.futures import wait, ProcessPoolExecutor
 
-import services
-import settings
-from snmp import snmp_process
 import sdn_utils
+import services
+from snmp import snmp_process
 
 try:
     import uvloop
 
     can_uvloop = True
-except:
+except ImportError:
     can_uvloop = False
 
 
