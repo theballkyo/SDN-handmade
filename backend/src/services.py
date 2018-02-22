@@ -94,7 +94,10 @@ class DeviceService(Service):
         })
         if data is None:
             return None
-        return data['ssh_info']
+        ssh_info = data['ssh_info']
+        ssh_info['ip'] = management_ip
+        ssh_info['device_type'] = data['type']
+        return ssh_info
 
     def find_by_if_ip(self, ip):
         """
