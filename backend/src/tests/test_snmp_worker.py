@@ -11,8 +11,11 @@ def main():
         device_service.set_snmp_running(device['management_ip'], False)
     worker = snmp_worker.SNMPWorker()
     a = mp.Process(target=worker.run)
-    a.start()
-    a.join()
+    try:
+        a.start()
+    except KeyboardInterrupt:
+        worker.shutdown()
+        a.join()
 
 
 if __name__ == '__main__':
