@@ -43,7 +43,8 @@ class SNMPWorker:
         await snmp_process.process_route(host, community, port)
         await snmp_process.process_cdp(host, community, port)
 
-    def run_loop(self, device):
+    @staticmethod
+    def run_loop(device):
         """ Run loop
         """
         management_ip = device['management_ip']
@@ -55,7 +56,7 @@ class SNMPWorker:
         logging.debug("SNMP Worker: Start loop device IP %s", management_ip)
 
         loop.run_until_complete(
-            self.get_and_store(device)
+            SNMPWorker.get_and_store(device)
         )
         device_service.set_snmp_finish_running(management_ip)
 
@@ -77,7 +78,7 @@ class SNMPWorker:
     def run(self):
         num_worker = sdn_utils.get_snmp_num_worker()
 
-        executor = ProcessPoolExecutor(num_worker)
+        executor = ProcessPoolExecutor(4)
         device_service = services.get_service('device')
         while not self.stop_signal:
             self.running = list(filter(lambda x: x.done() is False, self.running))
@@ -98,5 +99,5 @@ class SNMPWorker:
                 # Mark device SNMP is running
                 device_service.set_snmp_running(device['management_ip'], True)
                 # Submit
-                self.running.append(executor.submit(self.run_loop, device))
+                self.running.append(executor.submit(SNMPWorker.run_loop, device))
             time.sleep(1)
