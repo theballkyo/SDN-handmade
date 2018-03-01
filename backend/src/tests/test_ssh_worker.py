@@ -1,11 +1,13 @@
 from worker.ssh.ssh_worker import SSHWorker
+from worker.monitor.policy_monitor_task import PolicyMonitorTask
 from threading import Thread
 import logging
+import logbug
 import timeit
 
 
 def main():
-    ssh_worker = SSHWorker()
+    ssh_worker = SSHWorker(PolicyMonitorTask)
     t = Thread(target=ssh_worker.start, daemon=True)
     t.start()
     try:
@@ -22,5 +24,6 @@ if __name__ == '__main__':
         level=logging.INFO,
         format='[%(levelname)s] (%(threadName)-10s) %(message)s',
     )
+    # logbug.init(10)
     usage_time = timeit.timeit(main, number=1)
     # print("Usage time: {:.3f}".format(usage_time))

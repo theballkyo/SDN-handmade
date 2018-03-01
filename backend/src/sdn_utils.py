@@ -3,6 +3,7 @@ import socket
 import struct
 import settings
 import os
+import netaddr
 
 
 def get_snmp_num_worker():
@@ -11,6 +12,7 @@ def get_snmp_num_worker():
         num_worker = int(num_worker)
     except ValueError:
         num_worker = os.cpu_count()
+    return num_worker
 
 
 def hex_to_string(str_hex):
@@ -52,6 +54,10 @@ def cal_bw_usage_percent(octets, if_speed, in_time):
     return (octets * 8 * 100) / (in_time * if_speed)
 
 
+def bandwidth_usage_percent_to_bit(speed, percent):
+    return percent / 100 * speed
+
+
 def subnet_mask_to_wildcard_mask(subnet_mask):
     """ Convert subnet mask to wildcard mask
     """
@@ -65,6 +71,20 @@ def is_int(val):
         return True
     except ValueError:
         return False
+
+
+def generate_link_id(src_ip, dst_ip):
+    """
+
+    :param src_ip:
+    :param dst_ip:
+    :return: @String link_id
+    """
+    src_ip = netaddr.IPAddress(src_ip)
+    dst_ip = netaddr.IPAddress(dst_ip)
+    if src_ip < dst_ip:
+        return "{},{}".format(str(src_ip), str(dst_ip))
+    return "{},{}".format(str(dst_ip), str(src_ip))
 
 
 # def calculate_bw_usage_byte(octets, if_speed, in_time):

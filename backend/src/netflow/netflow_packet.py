@@ -59,9 +59,9 @@ class DataFlowSet:
 
                 if field.field_type in (21, 22):
                     fdata = int(fdata)
-                    fdata = ((header.timestamp * 1000.0) - header.uptime) + fdata
+                    fdata = ((header.timestamp * 1000) - header.uptime) + fdata
                     # Convert to second
-                    fdata /= 1000
+                    # fdata /= 1000
                     fdata = sdn_utils.unix_to_datetime(fdata)
 
                 new_record.data[fkey] = fdata

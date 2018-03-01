@@ -1,15 +1,69 @@
 import logging
 import time
 from concurrent.futures import wait, ThreadPoolExecutor
-
-from flow import FlowState
-from remote_access.ssh.ssh_process import run_flow_loop
-from service import FlowTableService
-from services import get_service
-import router_command as router_cmd
-from remote_access.ssh.worker_queue import SSHQueueWorker
-from queue import Queue, Empty
 from multiprocessing import Manager
+from threading import Lock
+from queue import Queue, Empty
+
+from remote_access.ssh.worker_queue import SSHQueueWorker
+from services import get_service
+
+
+class SSHConnection:
+    def __init__(self):
+        self.devices = {}
+        self.lock = Lock()
+
+    def add_connection(self, device):
+        self.lock.acquire()
+        self.devices[device['device_ip']] = device['data']
+        self.lock.release()
+
+    def remove_connection(self, device_ip):
+        self.lock.acquire()
+        del self.devices[device_ip]
+        self.lock.release()
+
+    def check_connection(self, device_list):
+        logging.debug("Check connect")
+        self.lock.acquire()
+        logging.debug("Start check connect")
+        results = []
+        for device in device_list:
+            _device = self.devices.get(device)
+            if not _device:
+                results.append(False)
+            else:
+                results.append(_device['is_connect_value'].value)
+        if not all(results):
+            self.lock.release()
+            return results
+        results = []
+        for device in device_list:
+            self.devices[device]['work_q'].put({'type': 'recheck'})
+        for device in device_list:
+            result = self.devices[device]['result_q'].get()
+            results.append(result)
+        logging.info(results)
+        self.lock.release()
+        return results
+
+    def send_config_set(self, config_set):
+        self.lock.acquire()
+        for device, cmd in config_set.items():
+            _device = self.devices.get(device)
+            if not _device:
+                return False
+        for _device, cmd in config_set.items():
+            self.devices.get(_device)['work_q'].put({
+                'type': 'send_config',
+                'data': cmd
+            })
+        results = {}
+        for _device in config_set.keys():
+            results[_device] = self.devices.get(_device)['result_q'].get()
+        self.lock.release()
+        return results
 
 
 class SSHWorker:
@@ -19,9 +73,9 @@ class SSHWorker:
         self.stop_signal = False
         self.device_service = get_service("device")
         self.results_q = Queue()
-        self.ssh_connection = {}
+        self.ssh_connection = SSHConnection()
         self.manager = Manager()
-        self.tasks = (task() for task in tasks)
+        self.tasks = [task() for task in tasks]
 
     def stop(self):
         self.stop_signal = True
@@ -77,9 +131,11 @@ class SSHWorker:
                 result = self.results_q.get(timeout=0.05)
                 if result:
                     if result.get('remove'):
-                        del self.ssh_connection[result['device_ip']]
+                        # del self.ssh_connection[result['device_ip']]
+                        self.ssh_connection.remove_connection(result['device_ip'])
                     else:
-                        self.ssh_connection[result['device_ip']] = result['data']
+                        self.ssh_connection.add_connection(result)
+                        # self.ssh_connection[result['device_ip']] = result['data']
             except Empty:
                 break
 
@@ -87,12 +143,16 @@ class SSHWorker:
         pool = ThreadPoolExecutor(1)
         # Start control worker queue
         pool.submit(self._control_worker_queue, self.results_q)
+        time.sleep(10)
         while not self.stop_signal:
             self._update_worker_queue()
             try:
+                logging.info("Start task")
+                logging.info(self.tasks)
                 for task in self.tasks:
                     task.run(self.ssh_connection)
-                time.sleep(1)
+                logging.info("End task")
+                time.sleep(10)
             except KeyboardInterrupt:
                 break
             except Exception as e:

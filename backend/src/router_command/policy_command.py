@@ -5,17 +5,17 @@ def generate_config_command(flow):
     pass
 
 
-def generate_flow_command(device_type, flow):
+def generate_policy_command(device_type, policy):
     if device_type == 'cisco_ios':
         # cmd = CiscoIosFlowCommand(flow)
-        return cisco_ios_cmd.generate_flow_command(flow)
+        return cisco_ios_cmd.generate_policy_command(policy)
     else:
         raise ValueError("No device type: {}".format(device_type))
 
 
-def generate_action_command(device_type, flow, action):
+def generate_action_command(device_type, flow_id, flow_name, action):
     if device_type == 'cisco_ios':
         # cmd = CiscoIosFlowCommand(flow)
-        return cisco_ios_cmd.generate_action_command(flow, action)
+        return cisco_ios_cmd.generate_action_command(flow_id, flow_name, action)
     else:
         raise ValueError("No device type: {}".format(device_type))

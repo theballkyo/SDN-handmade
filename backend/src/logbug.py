@@ -2,6 +2,9 @@
 import logging
 import logging.handlers
 import struct
+import pprint
+from multiprocessing import Queue
+from threading import Thread
 # import readline
 from datetime import datetime
 
@@ -30,13 +33,19 @@ def debug(msg):
 
 class LogBug:
 
-    def __init__(self, queue):
+    def __init__(self, use_pprint=False, queue=None):
         self.queue = queue
         self.prompt = ''
         self.is_wait_input = False
         self.shutdown = False
         self.log_level = 0
+        self.use_pprint = use_pprint
         # self.sys = sys
+
+    def auto_run(self):
+        self.queue = Queue()
+        Thread(target=self.listener_thread, daemon=True).start()
+        self.worker_config()
 
     def pre_shutdown(self):
         self.prompt = ""
@@ -55,12 +64,14 @@ class LogBug:
 
     def worker_config(self):
         h = logging.handlers.QueueHandler(self.queue)
+        h2 = LogBugHandler()
         root = logging.getLogger()
         root.addHandler(h)
+        root.addHandler(h2)
         root.setLevel(logging.DEBUG)
 
     def listener_thread(self):
-        self.listener_configurer()
+        # self.listener_configurer()
         # import fcntl
         # import termios
         import sys
@@ -92,15 +103,15 @@ class LogBug:
                 # Move to start of line
                 sys.stdout.write('\x1b[1000D')
                 # print(record.__dict__)
+                data = vars(record)
+                data.update({'created': datetime.fromtimestamp(record.created)})
 
-                data = {
-                    'created': datetime.fromtimestamp(record.created),
-                    'levelno': record.levelno,
-                    'levelname': record.levelname,
-                    'message': record.message
-                }
+                # If use pretty print
+                if self.use_pprint:
+                    data.update({'message': pprint.pformat(record.message, indent=8)})
+
                 sys.stdout.write(
-                    "{created} [{levelname}({levelno})] {message}\n".format(**data))
+                    "[{created:%Y-%m-%d %H:%M:%S} {levelname}] [{processName}]: {message}\n".format(**data))
                 # sys.stdout.write(record)
                 if self.is_wait_input:
                     sys.stdout.write(self.prompt + buff)
@@ -116,8 +127,16 @@ class LogBug:
                 # print >> sys.stderr, 'Whoops! Problem:'
                 traceback.print_exc(file=sys.stderr)
 
-    def listener_configurer(self):
-        root = logging.getLogger()
-        # h = logging.StreamHandler()
-        h = LogBugHandler()
-        root.addHandler(h)
+    # def listener_configurer(self):
+    #     root = logging.getLogger()
+    #     # h = logging.StreamHandler()
+    #     h = LogBugHandler()
+    #     root.addHandler(h)
+
+
+_logbug = {'logbug': LogBug()}
+
+
+def init(level=0):
+    _logbug['logbug'].log_level = level
+    _logbug['logbug'].auto_run()

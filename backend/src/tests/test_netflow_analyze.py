@@ -1,6 +1,7 @@
 from flow import NetflowAnalyze
 from datetime import datetime
 from pprint import pprint
+import logging
 # import pytz
 
 
@@ -15,4 +16,7 @@ def main():
 
 
 if __name__ == '__main__':
+    FORMAT = '%(asctime)-15s [%(levelname)s] (%(threadName)-10s) %(message)s'
+    logging.basicConfig(level=logging.DEBUG,
+                        format=FORMAT)
     main()

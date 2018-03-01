@@ -6,7 +6,8 @@ import netaddr
 import networkx as nx
 
 import generate_graph
-import services
+import service
+import sdn_utils
 
 from enum import Enum, unique
 
@@ -25,10 +26,6 @@ class PathFinder:
         HIGHEST = 3
 
     def __init__(self, auto_update_graph=True):
-        # Create NetworkX graph
-        self.graph = None
-        self.update_graph()
-
         # If true.
         # It automatically update graph when get a path
         self.auto_update_graph = auto_update_graph
@@ -38,10 +35,17 @@ class PathFinder:
         # Cache link information
         self.link_cache = {}
 
+        self.device_service = service.get_service("device")
+        self.route_service = service.get_service('route')
+
+        # Create NetworkX graph
+        self.graph = None
+        self.update_graph()
+
     def update_graph(self):
         """ Use for update NetworkX graph object
         """
-        devices = services.device_service.get_all()
+        devices = self.device_service.get_all()
         # print(services.device_service.get_active().count())
         try:
             self.graph = generate_graph.create_networkx_graph(devices)
@@ -58,6 +62,11 @@ class PathFinder:
 
         raise NotImplementedError()
 
+    # def get_management_ip(self, ip):
+    #
+    #     management_ip = ''
+    #     return management_ip
+
     def active_by_manage_ip(self, src_ip, dst_ip, prev_path=None, path=None):
         # if self.auto_update_graph:
         #     self.update_graph()
@@ -68,7 +77,9 @@ class PathFinder:
         dst_ip = netaddr.IPAddress(dst_ip)
         start_device_ip = src_ip
 
-        routes = services.get_service('route').route.find({
+        # Todo Check route from route-map
+
+        routes = self.route_service.route.find({
             # 'type': 4,
             'device_ip': start_device_ip,
             'start_ip': {
@@ -96,7 +107,7 @@ class PathFinder:
                     final_path.append(str(dst_ip))
                 path.add(tuple(final_path))
                 return
-            next_hop_device = services.get_service('device').device.find_one({
+            next_hop_device = self.device_service.device.find_one({
                 'interfaces.ipv4_address': next_hop
             })
             if next_hop_device is None:
@@ -134,14 +145,15 @@ class PathFinder:
             for i in range(len(path) - 1):
                 try:
                     edge = self.graph.edges[(path[i], path[i + 1])]
-                    if path_bandwidth is None:
-                        path_bandwidth = edge['link_min_speed']
-                    path_bandwidth = min(path_bandwidth, edge['link_min_speed'])
+                    for _, link in edge['links'].items():
+                        if path_bandwidth is None:
+                            path_bandwidth = link['link_min_speed']
+                        path_bandwidth = min(path_bandwidth, link['link_min_speed'])
                 except ValueError:
                     pass
             if last_bandwidth is None:
                 last_bandwidth = path_bandwidth
-            logging.debug(path_bandwidth, last_bandwidth)
+            logging.debug("Path bandwidth: [%d], Last bandwidth: [%d]", path_bandwidth, last_bandwidth)
 
             if path_bandwidth > last_bandwidth:
                 # Find new higher bandwidth. Clear old paths
@@ -182,105 +194,148 @@ class PathFinder:
         # print(list(nx.all_simple_paths(self.graph, src_ip, dst_ip)))
         # return nx.all_simple_paths(self.graph, src_ip, dst_ip)
 
-    def find_by_available_bandwidth(self, src_ip, dst_ip, select_by, link_side):
+    def find_by_available_bandwidth(self, src_ip, dst_ip, select_by, min_available_bw=None):
         """
         Find path(s) is interface speed by selector lowest or highest
         :param src_ip:
         :param dst_ip:
         :param select_by:
-        :param link_side:
+        :param min_available_bw: Minimum bandwidth in bit
         :return:
         """
         if select_by not in self.SelectBy:
-            logging.warning("select_by arg not in choices")
+            logging.error("select_by arg not in choices")
             return []
 
-        if link_side not in self.LinkSide:
-            logging.warning("link_side arg not in choices")
-            return []
-
-        device_service = services.get_service("device")
         all_paths = self.all_by_manage_ip(src_ip, dst_ip)
         paths = []
         last_bandwidth = None
         for path in all_paths:
-            path_bandwidth = None
+            path_available_bandwidth = None
+            path_link = []
             for i in range(len(path) - 1):
                 try:
                     edge = self.graph.edges[(path[i], path[i + 1])]
                     # Check is exist in link_cache
-                    link = self.link_cache.get(edge['src_ip'])
-                    if not link:
-                        link = device_service.device.aggregate([
-                            {
-                                '$match': {
-                                    "interfaces.ipv4_address": edge['src_ip']
-                                }
-                            },
-                            {
-                                '$project': {
-                                    'interfaces': {
-                                        '$filter': {
-                                            'input': "$interfaces",
-                                            'as': 'interface',
-                                            'cond': {
-                                                '$or': [
-                                                    {'$eq': ["$$interface.ipv4_address", edge['src_ip']]}
-                                                ]
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        ])
+                    for link_id, link_data in edge['links'].items():
+                        link = self.get_link(link_id, link_data)
 
-                        link = list(link)
-                        # Cache link
-                        self.link_cache[edge['src_ip']] = link
+                        # IN  link == Interface is receive a packet
+                        # OUT link == Interface is send a packet
 
-                    # Clone list object before use
-                    link = link[:]
-                    # pprint.pprint(link)
-                    link_if = link[0]['interfaces'][0]
-                    in_bw = link_if['bw_in_usage_percent'] * link_if['speed']
-                    out_bw = link_if['bw_out_usage_percent'] * link_if['speed']
+                        if link['src']['management_ip'] == path[i]:
+                            out_if = link['src']['interfaces'][0]
+                            in_if = link['dst']['interfaces'][0]
+                        else:
+                            out_if = link['dst']['interfaces'][0]
+                            in_if = link['src']['interfaces'][0]
 
-                    if path_bandwidth is None:
-                        path_bandwidth = link_if['speed'] - in_bw
+                        out_available = out_if['speed'] - (out_if['bw_out_usage_percent'] / 100 * out_if['speed'])
+                        in_available = in_if['speed'] - (in_if['bw_in_usage_percent'] / 100 * in_if['speed'])
+                        # logging.debug("%.2f, %.2f, %.2f, %.2f, %.2f, %.2f",
+                        #               out_if['bw_in_usage_percent'],
+                        #               out_if['bw_out_usage_percent'],
+                        #               in_if['bw_in_usage_percent'],
+                        #               in_if['bw_out_usage_percent'],
+                        #               in_available,
+                        #               out_available)
+                        this_path_bandwidth = min(in_available, out_available)
 
-                    if link_side == self.LinkSide.IN:
-                        bw = in_bw
-                    elif link_side == self.LinkSide.OUT:
-                        bw = out_bw
-                    elif link_side == self.LinkSide.HIGHEST:
-                        # Select type is available is higher
-                        bw = min(in_bw, out_bw)
-                    elif link_side == self.LinkSide.LOWEST:
-                        # Select type is available is lower
-                        bw = max(in_bw, out_bw)
+                        if path_available_bandwidth is None:
+                            path_available_bandwidth = this_path_bandwidth
+                        else:
+                            path_available_bandwidth = min(path_available_bandwidth, this_path_bandwidth)
 
-                    logging.debug((link_if['speed'] - in_bw, link_if['speed'] - out_bw, link_if['speed'] - bw))
-                    path_bandwidth = min(path_bandwidth, link_if['speed'] - bw)
+                        # Path is [node1, node2, node3, ...]
+                        path_link.append({
+                            'out': out_if,  # Left node <node1>, <node2>
+                            'in': in_if  # Right node <node2>, <node3>
+                        })
+
                 except ValueError:
                     pass
             if last_bandwidth is None:
-                last_bandwidth = path_bandwidth
-            logging.debug("Path {} bandwidth is {:.2f}, {:.2f}".format(path, path_bandwidth, last_bandwidth))
-            if path_bandwidth > last_bandwidth:
+                last_bandwidth = path_available_bandwidth
+            logging.debug(
+                "Path {} available bandwidth is {:.2f}, {:.2f}".format(path, path_available_bandwidth, last_bandwidth))
+
+            if min_available_bw:
+                # Check Path bandwidth is higher than min available bandwidth is user request
+                if path_available_bandwidth < min_available_bw:
+                    last_bandwidth = None
+                    continue
+
+            if path_available_bandwidth > last_bandwidth:
                 # Find new higher bandwidth. Clear old paths
                 if select_by == self.SelectBy.HIGHEST:
                     paths = list()
-                    paths.append(path)
-                    last_bandwidth = path_bandwidth
-            elif path_bandwidth < last_bandwidth:
+                    paths.append({
+                        'path': path,
+                        'path_link': path_link,
+                        'available_bandwidth': path_available_bandwidth
+                    })
+                    last_bandwidth = path_available_bandwidth
+            elif path_available_bandwidth < last_bandwidth:
                 if select_by == self.SelectBy.LOWEST:
                     paths = list()
-                    paths.append(path)
-                    last_bandwidth = path_bandwidth
+                    paths.append({
+                        'path': path,
+                        'path_link': path_link,
+                        'available_bandwidth': path_available_bandwidth
+                    })
+                    last_bandwidth = path_available_bandwidth
             else:
-                paths.append(path)
+                paths.append({
+                    'path': path,
+                    'path_link': path_link,
+                    'available_bandwidth': path_available_bandwidth
+                })
 
         return paths
+
+    def get_link_by_ip(self, ip1, ip2, force_update=False):
+        ip1 = netaddr.IPAddress(ip1)
+        ip2 = netaddr.IPAddress(ip2)
+        edge = self.graph
+
+    def get_link(self, link_id, link_data, force_update=False):
+        link = self.link_cache.get(link_id)
+        if not link or force_update:
+            links = self.device_service.device.find({
+                'interfaces.ipv4_address': {
+                    '$in': [
+                        link_data['src_ip'], link_data['dst_ip']
+                    ]
+                }
+            }, {
+                'management_ip': 1,
+                'interfaces.$1': 1
+            })
+
+            for _link in links:
+                if _link['interfaces'][0]['ipv4_address'] == link_data['src_ip']:
+                    src_link = _link
+                else:
+                    dst_link = _link
+
+            # Cache link
+            link = {
+                'src': src_link,
+                'dst': dst_link
+            }
+            self.link_cache[link_id] = link
+
+        return link
+
+    def get_links(self):
+        _links = []
+        for u, v, links in self.graph.edges.data('links'):
+            if links is not None:
+                for link_id, link_data in links.items():
+                    link = self.get_link(link_id, link_data, True)
+                    _links.append(link)
+
+        return _links
 
     def plot(self):
         if self.auto_update_graph:

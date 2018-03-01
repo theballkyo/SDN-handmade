@@ -1,6 +1,7 @@
 from database import get_mongodb
 import os
 import time
+import logging
 
 
 class Service:
@@ -15,7 +16,7 @@ class AppService(Service):
 
     def is_running(self):
         app = self.db.app.find_one({}, {'is_running': 1})
-        return app
+        return app['is_running']
 
     def set_running(self, running):
         self.db.app.update_one({}, {
@@ -140,6 +141,23 @@ class DeviceService(Service):
         """ Remove device """
         self.device.remove({'management_ip': management_ip})
 
+    def get_by_if_utilization(self, percent, side='in'):
+        if side == 'in':
+            key_name = 'bw_in_usage_percent'
+        elif side == 'out':
+            key_name = 'bw_out_usage_percent'
+        else:
+            raise ValueError('side can be only in or out')
+
+        self.device.find({
+            '$gte': {
+                key_name: percent
+            }
+        }, {
+            'management_ip': 1,
+            'interfaces.$': 1
+        })
+
 
 class RouteService(Service):
     route_type = {
@@ -181,13 +199,14 @@ class NetflowService(Service):
         super(NetflowService, self).__init__(*args, **kwargs)
         self.netflow = self.db.netflow
 
-    def get_ingress_flow(self, start_time, end_time, limit=10, extra_match=None, group_by=(),
+    def get_ingress_flow(self, start_time, end_time, limit=10, skip=0, extra_match=None, group_by=(),
                          sort=None, side='ingress'):
         """
         Getting flow
         :param start_time: First switched time >= start time
         :param end_time:  First switched time <= end time
         :param limit: Limit flow
+        :param skip: Skip
         :param extra_match: Extra match filter
         :param group_by: Group by default use 4 fields
         :param sort: Sort by default sort by total_in_bytes
@@ -204,8 +223,8 @@ class NetflowService(Service):
         }
 
         if extra_match:
-            match = {**extra_match, **match}
-            print(match)
+            match = {**match, **extra_match}
+            # print(match)
 
         # Group stage
         group = {
@@ -219,7 +238,7 @@ class NetflowService(Service):
             group['total_out_bytes'] = {'$sum': '$out_bytes'}
             group['total_out_pkts'] = {'$sum': '$out_pkts'}
 
-        if len(group_by) <= 0:
+        if len(group_by) == 0:
             group_by = ('ipv4_src_addr', 'ipv4_dst_addr', 'l4_src_port', 'l4_dst_port')
 
         for field in group_by:
@@ -256,10 +275,10 @@ class NetflowService(Service):
             count_flow["data"]["$push"]["total_out_bytes"] = "$total_out_bytes"
             count_flow["data"]["$push"]["total_out_pkts"] = "$total_out_pkts"
 
-        pipeline = [{'$match': match}, {'$group': group}, {'$sort': sort}, {'$limit': limit},
-                    {'$group': count_flow}]
+        pipeline = [{'$match': match}, {'$group': group}, {'$sort': sort}, {'$skip': skip},
+                    {'$limit': limit}, {'$group': count_flow}]
 
-        print(pipeline)
+        logging.debug(pipeline)
         flows = self.netflow.aggregate(pipeline)
         return flows
 

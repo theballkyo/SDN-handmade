@@ -12,3 +12,4 @@ https://www.sdxcentral.com/sdn-nfv-use-cases/data-center-optimization/mice-eleph
 
 # statistics collection interval
 https://www.cisco.com/c/en/us/td/docs/switches/lan/catalyst2960x/software/15-2_5_e/configuration_guide/b_1525e_consolidated_2960x_cg/b_1525e_consolidated_2960x_cg_chapter_01001101.pdf
+https://www.slideshare.net/rjain51/m-14ofl

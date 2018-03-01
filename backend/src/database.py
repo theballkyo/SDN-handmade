@@ -10,9 +10,10 @@ _connections = {}
 
 
 def get_mongodb(alias=DEFAULT_CONNECTION_NAME):
+    global _connections
     alias_original = alias
     alias = alias + str(os.getpid())
-    if alias not in _connections:
+    if _connections.get(alias) is None:
         # Check mongodb configuration
         config = settings.database.get(alias_original)
         if config is not None:
@@ -23,10 +24,20 @@ def get_mongodb(alias=DEFAULT_CONNECTION_NAME):
         else:
             raise ValueError("Can't find config alias name %s" % alias)
     return _connections[alias]
+    # if alias not in _connections:
+    #     # Check mongodb configuration
+    #     config = settings.database.get(alias_original)
+    #     if config is not None:
+    #         if config.get('driver', '') != 'mongodb':
+    #             raise ValueError("config driver is not mongodb")
+    #         max_pool_size = config.get('max_pool_size', 10)
+    #         _connections[alias] = MongoDB(config['uri'], config['database'], max_pool_size)
+    #     else:
+    #         raise ValueError("Can't find config alias name %s" % alias)
+    # return _connections[alias]
 
 
 def disconnect(alias=DEFAULT_CONNECTION_NAME):
-    alias = alias + str(os.getpid())
     if alias in _connections:
         _connections[alias].client.close()
         del _connections[alias]

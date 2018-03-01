@@ -19,7 +19,7 @@ class SNMPWorker:
     def __init__(self):
         self.running = []
         self.stop_signal = False
-        self.loop_time = 30
+        self.loop_time = 7
 
     @staticmethod
     async def get_and_store(device):
@@ -72,13 +72,14 @@ class SNMPWorker:
         logging.debug(self.running)
         for future in self.running:
             future.cancel()
+            time.sleep(0.1)
         wait(self.running)
         logging.info("SNMP Worker: shutdown complete")
 
     def run(self):
         num_worker = sdn_utils.get_snmp_num_worker()
 
-        executor = ProcessPoolExecutor(4)
+        executor = ProcessPoolExecutor(num_worker)
         device_service = services.get_service('device')
         while not self.stop_signal:
             self.running = list(filter(lambda x: x.done() is False, self.running))

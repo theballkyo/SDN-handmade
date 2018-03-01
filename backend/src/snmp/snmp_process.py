@@ -1,14 +1,14 @@
 from netaddr import IPNetwork
 
 from snmp import snmp_async
-import services
+import service
 import sdn_utils
 import time
 
 
 async def process_cdp(host, community, port):
-    cdp_service = services.get_service('cdp')
-    device_service = services.get_service('device')
+    cdp_service = service.get_service('cdp')
+    device_service = service.get_service('device')
     cdp = await snmp_async.get_cdp(host, community, port)
 
     if cdp is None:
@@ -34,7 +34,7 @@ async def process_cdp(host, community, port):
 
 
 async def process_system(host, community, port):
-    device_service = services.get_service('device')
+    device_service = service.get_service('device')
     system_info = await snmp_async.get_system_info(host, community, port)
     ip_addrs = await snmp_async.get_ip_addr(host, community, port)
     interfaces = await snmp_async.get_interfaces(host, community, port)
@@ -84,12 +84,30 @@ async def process_system(host, community, port):
 
                     # Add information
                     interface['bw_in_usage_octets'] = in_octets
+                    interface['bw_in_usage_persec'] = (in_octets / in_in_time) * 8
                     interface['bw_in_usage_percent'] = bw_in_usage_percent
 
                     interface['bw_out_usage_octets'] = out_octets
+                    interface['bw_out_usage_persec'] = (out_octets / out_in_time) * 8
                     interface['bw_out_usage_percent'] = bw_out_usage_percent
 
                     interface['bw_usage_update'] = time.time()
+
+                    if interface.get('ipv4_address'):
+                        ip = IPNetwork("{}/{}".format(interface['ipv4_address'], interface['subnet']))
+
+                        if ip.size == 1:
+                            start_ip = ip.first
+                            end_ip = ip.first
+                        elif ip.size == 2:
+                            start_ip = ip.first
+                            end_ip = ip.last
+                        else:
+                            start_ip = ip.first
+                            end_ip = ip.last
+
+                        interface['start_ip'] = start_ip
+                        interface['end_ip'] = end_ip
 
                     # logging.debug(
                     #     ' || BW in usage %.3f%% || %d bytes',
@@ -114,7 +132,7 @@ async def process_system(host, community, port):
 
 
 async def process_route(host, community, port):
-    route_service = services.get_service('route')
+    route_service = service.get_service('route')
     routes = await snmp_async.get_routes(host, community, port)
 
     if routes is None:

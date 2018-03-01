@@ -29,6 +29,7 @@ class SSHQueueWorker(threading.Thread):
         self.new_worker_queue()
 
     def new_worker_queue(self):
+        work = None  # Default null
         ssh_info = self.ssh_info
         retry_count = 0
         while True:
@@ -70,7 +71,7 @@ class SSHQueueWorker(threading.Thread):
                 logging.info("Name: %s run looping", self.getName())
                 if not reconnect:
                     try:
-                        work = self._work_queue.get(timeout=120)
+                        work = self._work_queue.get(timeout=30)
                     except queue.Empty:
                         work = None
                 else:
@@ -102,13 +103,6 @@ class SSHQueueWorker(threading.Thread):
                 if work['type'] == 'send_config':
                     # Send config
                     logging.info("Start send config")
-                    output = net_connect.send_config_set(work['data'])
+                    net_connect.send_config_set(work['data'])
                     logging.info("End send config")
-                    self._result_q.put(output)
-
-                if work['type'] == 'send_command':
-                    # Send config
-                    logging.info("Start send command")
-                    output = net_connect.send_command_expect(work['data'])
-                    logging.info("End send command")
-                    self._result_q.put(output)
+                    self._result_q.put(True)

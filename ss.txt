@@ -1,0 +1,90 @@
+add device
+cisco_ios
+192.168.1.1
+cisco
+cisco
+cisco
+
+
+
+add device
+cisco_ios
+192.168.1.2
+cisco
+cisco
+cisco
+
+
+
+add device
+cisco_ios
+192.168.1.6
+cisco
+cisco
+cisco
+
+
+
+add device
+cisco_ios
+192.168.1.10
+cisco
+cisco
+cisco
+
+
+
+add device
+cisco_ios
+192.168.1.13
+cisco
+cisco
+cisco
+
+
+
+add device
+cisco_ios
+192.168.2.1
+cisco
+cisco
+cisco
+
+
+
+add device
+cisco_ios
+192.168.2.2
+cisco
+cisco
+cisco
+
+
+
+add device
+cisco_ios
+192.168.3.1
+cisco
+cisco
+cisco
+
+
+
+add device
+cisco_ios
+192.168.3.2
+cisco
+cisco
+cisco
+
+
+
+add device
+cisco_ios
+192.168.3.5
+cisco
+cisco
+cisco
+
+
+

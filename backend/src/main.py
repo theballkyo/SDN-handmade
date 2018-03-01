@@ -57,9 +57,8 @@ if __name__ == '__main__':
     # Fix when draw image in terminal without display
     matplotlib.use('Agg')
     # format = '[%(levelname)s] (%(threadName)-10s) %(message)s'
-    FORMAT = '%(asctime)-15s [%(levelname)s] (%(threadName)-10s) %(message)s'
-    logging.basicConfig(level=logging.DEBUG,
-                        format=FORMAT)
+    # FORMAT = '%(asctime)-15s [%(levelname)s] (%(processName)-10s) (%(threadName)-10s): %(message)s'
+    # logging.basicConfig(level=logging.DEBUG)
 
     if os.name == 'nt':
         print("Warning: Windows is not fully support.")

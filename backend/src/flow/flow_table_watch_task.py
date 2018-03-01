@@ -1,13 +1,13 @@
 import logging
-from service import FlowTableService
+from service import get_flow_table_service
 from flow import FlowState
 from services import get_service
-from router_command import generate_action_command, generate_flow_command
+from router_command import generate_action_command, generate_policy_command
 
 
 class FlowTableWatchTask:
     def __init__(self):
-        self.fts = FlowTableService()
+        self.fts = get_flow_table_service()
         self.device_service = get_service('device')
 
     def run_task(self, ssh_connection, flow):
@@ -30,7 +30,7 @@ class FlowTableWatchTask:
             if not ssh_info:
                 continue
 
-            flow_cmd = generate_flow_command(ssh_info['device_type'], flow)
+            flow_cmd = generate_policy_command(ssh_info['device_type'], flow)
             action_cmd = generate_action_command(ssh_info['device_type'], flow, action)
             cmd = flow_cmd + action_cmd
             cmd_list[action['device_ip']] = cmd

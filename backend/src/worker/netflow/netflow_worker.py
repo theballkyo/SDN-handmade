@@ -3,7 +3,7 @@ import socket
 import threading
 import traceback
 
-from database import get_mongodb
+import service
 from netflow.netflow_packet import ExportPacket
 
 
@@ -17,7 +17,7 @@ class NetflowWorker(threading.Thread):
         self.stop_flag = False
         self.device = []
         self.daemon = True
-        self.mongo = get_mongodb()
+        self.netflow_service = service.get_service('netflow')
         # Setting thread name
         self.name = 'netflow-sv'
 
@@ -30,7 +30,6 @@ class NetflowWorker(threading.Thread):
 
         _templates = {}
 
-        netflow_db = self.mongo.netflow
         while not self.stop_flag:
             try:
                 (data, sender) = self.sock.recvfrom(8192)
@@ -50,7 +49,7 @@ class NetflowWorker(threading.Thread):
                     flow.data['from_ip'] = str(sender[0])
                     flow_data.append(flow.data)
 
-                netflow_db.insert_many(flow_data)
+                self.netflow_service.insert_many(flow_data)
 
             except Exception:
                 logging.info(traceback.format_exc())
