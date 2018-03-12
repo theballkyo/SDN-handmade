@@ -14,7 +14,9 @@ class LinkService(BaseService):
             ops.append(
                 UpdateOne({
                     'src_node_ip': link['src_node_ip'],
-                    'dst_node_ip': link['dst_node_ip']
+                    'src_if_ip': link['src_if_ip'],
+                    'dst_node_ip': link['dst_node_ip'],
+                    'dst_if_ip': link['dst_if_ip']
                 }, {
                     '$set': {
                         'src_node_ip': link['src_node_ip'],
@@ -23,6 +25,10 @@ class LinkService(BaseService):
                         'dst_if_ip': link['dst_if_ip'],
                         'src_if_index': link['src_if_index'],
                         'dst_if_index': link['dst_if_index'],
+                        'src_in_use': link['src_in_use'],
+                        'src_out_use': link['src_out_use'],
+                        'dst_in_use': link['dst_in_use'],
+                        'dst_out_use': link['dst_out_use']
                     }
                 }, upsert=True)
             )
@@ -40,6 +46,9 @@ class LinkService(BaseService):
 
         ip1 = netaddr.IPAddress(ip1)
         ip2 = netaddr.IPAddress(ip2)
+
+        if ip1 == ip2:
+            raise ValueError("Src IP can't equal Dst IP")
 
         if ip1 > ip2:
             ip1, ip2 = ip2, ip1

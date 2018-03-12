@@ -8,6 +8,8 @@ from service.policy_log_service import PolicyLogService
 from service.policy_seq_service import PolicySeqService
 from service.policy_service import PolicyRoute, PolicyService
 from service.route_service import RouteService
+from service.topology_path_service import TopologyPathService
+from service.topology_service import TopologyService
 
 _services = {}
 
@@ -20,7 +22,9 @@ _list_service = {
     'policy_log_service': PolicyLogService,
     'policy_seq_service': PolicySeqService,
     'policy_service': PolicyService,
-    'route_service': RouteService
+    'route_service': RouteService,
+    'topology_path_service': TopologyPathService,
+    'topology_service': TopologyService
 }
 
 

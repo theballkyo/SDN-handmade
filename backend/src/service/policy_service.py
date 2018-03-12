@@ -4,22 +4,59 @@ from service import BaseService
 from flow import FlowState
 import logging
 import time
+from typing import Optional, Dict
+
+
+# class PolicyAction:
+#     def __init__(self, actions: Dict):
+#         self.actions = actions.copy()
 
 
 class PolicyRoute:
-    def __init__(self):
+    FIELDS = ('src_ip',
+              'src_wildcard',
+              'src_port',
+              'dst_ip',
+              'dst_wildcard',
+              'dst_port',
+              'name',
+              'policy_id',
+              'time'
+              )
+
+    def __init__(self, policy: Dict, **kwargs):
         # TODO Support port
         self.src_network = None
         self.dst_network = None
 
-        self.actions = {}
+        for field in self.FIELDS:
+            setattr(self, field, None)
+
+        for field, value in policy.items():
+            if field in self.FIELDS:
+                setattr(self, field, value)
+
+        self.policy = {}
+        if policy.get('actions'):
+            self.actions = policy['actions'].copy()
+        else:
+            self.actions = {}
 
     def set_policy(self, **kwargs):
-        if kwargs.get('src_network'):
-            self.src_network = netaddr.IPNetwork(kwargs.get('src_network'))
+        for key, value in kwargs:
+            self.policy[key] = value
 
-        if kwargs.get('dst_network'):
-            self.dst_network = netaddr.IPNetwork(kwargs.get('dst_network'))
+    def set_action(self, action: Dict[str, Optional[str]]):
+        pass
+
+    def diff(self, new_policy):
+        pass
+
+    # if kwargs.get('src_network'):
+    #     self.src_network = netaddr.IPNetwork(kwargs.get('src_network'))
+    #
+    # if kwargs.get('dst_network'):
+    #     self.dst_network = netaddr.IPNetwork(kwargs.get('dst_network'))
 
     def add_action(self, node, action, data=None):
         self.actions[str(netaddr.IPAddress(node).value)] = {
@@ -49,7 +86,7 @@ class PolicyRoute:
             'dst_ip': str(self.dst_network.ip),
             'dst_port': None,
             'dst_wildcard': str(self.dst_network.hostmask),
-            'actions': self.actions
+            'actions': self.actions.copy()
         }
 
 
