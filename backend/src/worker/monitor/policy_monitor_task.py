@@ -1,9 +1,11 @@
 import pprint
 from time import time
 
-from service import get_service, PolicyRoute
+from service import get_service
 from router_command.policy_command import generate_action_command, generate_policy_command
 import logging
+from worker.ssh.ssh_worker import SSHConnection
+from typing import Dict
 
 
 class PolicyMonitorTask:
@@ -12,13 +14,13 @@ class PolicyMonitorTask:
         self.policy_seq_service = get_service('policy_seq')
 
     @staticmethod
-    def diff(current_policy, new_policy):
-        if current_policy['src_ip'] != new_policy['src_ip'] or \
-                current_policy['src_wildcard'] != new_policy['src_wildcard'] or \
-                current_policy['src_port'] != new_policy['src_port'] or \
-                current_policy['dst_ip'] != new_policy['dst_ip'] or \
-                current_policy['dst_wildcard'] != new_policy['dst_wildcard'] or \
-                current_policy['dst_port'] != new_policy['dst_port']:
+    def diff(currently_policy: Dict[str, any], new_policy: Dict[str, any]) -> Dict[str, any]:
+        if currently_policy['src_ip'] != new_policy['src_ip'] or \
+                currently_policy['src_wildcard'] != new_policy['src_wildcard'] or \
+                currently_policy['src_port'] != new_policy['src_port'] or \
+                currently_policy['dst_ip'] != new_policy['dst_ip'] or \
+                currently_policy['dst_wildcard'] != new_policy['dst_wildcard'] or \
+                currently_policy['dst_port'] != new_policy['dst_port']:
             diff_policy = new_policy.copy()
             diff_policy['policy'] = 'changed'
         else:
@@ -26,7 +28,7 @@ class PolicyMonitorTask:
 
         diff_policy['actions'] = new_policy['actions'].copy()
 
-        for key, action in current_policy['actions'].items():
+        for key, action in currently_policy['actions'].items():
             if new_policy['actions'].get(key):
                 # If not change
                 if new_policy['actions'][key]['action'] == action['action'] and \
@@ -39,7 +41,7 @@ class PolicyMonitorTask:
                 }
         return diff_policy
 
-    def run(self, ssh_connection=None):
+    def run(self, ssh_connection: SSHConnection) -> None:
         # 1 Find pending policy
         # 2 Find current policy
         # 3.1 If not have current policy -> Add new
@@ -55,6 +57,7 @@ class PolicyMonitorTask:
         # Remove policy
         if new_policy.get('type') == 'remove':
             pass
+
         # Automatic check exist flow
         if new_policy['policy'].get('name'):
             current_policy = self.policy_service.policy.find_one({
