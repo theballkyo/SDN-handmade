@@ -6,6 +6,7 @@ import networkx as nx
 import service
 import sdn_utils
 
+
 def create_networkx_graph(devices, add_link=True):
     """ Create graph than using NetworkX library
     """
@@ -33,11 +34,15 @@ def create_networkx_graph(devices, add_link=True):
 
                 if_index = -1
                 neighbor_if_speed = 0
+                neighbor_in_use = 0
+                neighbor_out_use = 0
                 for neighbor_interface in neighbor_device.get('interfaces'):
                     # Default is -1, -2 because if no IP is not match
                     if neighbor_interface.get('ipv4_address', -1) == neighbor.get('ip_addr', -2):
                         if_index = neighbor_interface['index']
                         neighbor_if_speed = neighbor_interface['speed']
+                        neighbor_in_use = neighbor_interface['bw_in_usage_persec']
+                        neighbor_out_use = neighbor_interface['bw_out_usage_persec']
                         break
 
                 # not have a neighbor
@@ -47,11 +52,15 @@ def create_networkx_graph(devices, add_link=True):
                 if_speed = 0
                 current_if_speed = 0
                 can_find_interface = False
+                src_in_use = 0
+                src_out_use = 0
                 for interface in src_device['interfaces']:
                     if interface.get('index') == neighbor['local_ifindex']:
                         current = interface
                         if_speed = min(neighbor_if_speed, interface.get('speed'))
                         current_if_speed = interface.get('speed')
+                        src_in_use = interface.get('bw_in_usage_persec')
+                        src_out_use = interface.get('bw_out_usage_persec')
                         can_find_interface = True
                         break
 
@@ -73,6 +82,8 @@ def create_networkx_graph(devices, add_link=True):
                     src_if_ip = neighbor['ip_addr']
                     src_port = neighbor['port']
                     src_if_index = neighbor_interface['index']
+                    src_in_use, neighbor_in_use = neighbor_in_use, src_in_use
+                    src_out_use, neighbor_out_use = neighbor_out_use, src_out_use
                     # src_usage = current['bw_in_usage_octets']
 
                 logging.debug("Added edge: " + src_device['management_ip'] + " - " + neighbor_device[
@@ -103,12 +114,16 @@ def create_networkx_graph(devices, add_link=True):
                     'src_if_ip': src_if_ip,
                     'src_port': src_port,
                     'src_if_index': src_if_index,
+                    'src_in_use': src_in_use,
+                    'src_out_use': src_out_use,
                     # 'src_usage': src_usage,
                     'dst_node_ip': dst_node_ip,
                     'dst_ip': dst_if_ip,
                     'dst_if_ip': dst_if_ip,
                     'dst_port': dst_port,
                     'dst_if_index': dst_if_index,
+                    'dst_in_use': neighbor_in_use,
+                    'dst_out_use': neighbor_out_use,
                     'link_min_speed': if_speed
                 }
 
