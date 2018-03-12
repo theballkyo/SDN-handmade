@@ -16,13 +16,12 @@ def main():
     import settings
     from api.rest_server import RestServer
 
-    queue = mp.Queue()
-
-    log_bug = lb.LogBug(queue)
+    lb.init()
+    # log_bug = lb.LogBug(queue)
     # Start listener_thread
-    threading.Thread(target=log_bug.listener_thread, daemon=True).start()
+    # threading.Thread(target=log_bug.listener_thread, daemon=True).start()
 
-    log_bug.worker_config()
+    # log_bug.worker_config()
 
     # Create topology
     topology = sdn.Topology(
