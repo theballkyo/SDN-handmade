@@ -148,4 +148,28 @@ def create_networkx_graph(devices, add_link=True):
 
     return networkx
 
+
+def get_all_subnet():
+    cdp_service = service.get_service('cdp')
+    device_service = service.get_service('device')
+    devices = device_service.get_active()
+    subnet_list = {}
+    for device in devices:
+        cdp_info = cdp_service.get_by_management_ip(device.get('management_ip'))
+        if not cdp_info:
+            raise NotImplementedError('Please enable CDP to use this function.')
+
+        for interface in device.get('interfaces'):
+            ip_addr = interface.get('ipv4_address')
+            if ip_addr:
+                subnet = interface.get('subnet')
+                network = netaddr.IPNetwork("{}/{}".format(ip_addr, subnet))
+                subnet_list[str(network)] = {
+                    'node': device.get('management_ip'),
+                    'ip': ip_addr,
+                    'mask': subnet
+                }
+
+    return subnet_list
+
 # def add_link_to_db():
