@@ -26,7 +26,8 @@ async def process_cdp(host, community, port):
         }, {
             '$set': {
                 'management_ip': host,
-                'neighbor': cdp
+                'neighbor': cdp,
+                'updated_at': time.time()
             }
         }, upsert=True)
 
@@ -122,6 +123,9 @@ async def process_system(host, community, port):
 
     system_info['interfaces'] = interfaces
 
+    # Set update time
+    system_info['updated_at'] = time.time()
+
     # Update device info
     device_service.device.update_one({
         'management_ip': host
@@ -159,6 +163,9 @@ async def process_route(host, community, port):
         route['start_ip'] = start_ip
         route['end_ip'] = end_ip
         route['management_ip'] = route['device_ip']
+
+        # Set update time
+        route['updated_at'] = time.time()
 
     # Insert net routes
     route_service.route.insert_many(routes)
