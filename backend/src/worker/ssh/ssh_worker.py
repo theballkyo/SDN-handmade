@@ -86,7 +86,7 @@ class SSHWorker:
     def _control_worker_queue(self, results_q):
         logging.info("Control worker queue start")
         _running = {}
-        while 1:
+        while True:
             devices = self.device_service.get_all()
             for device in devices:
                 # If exists skip
@@ -126,16 +126,14 @@ class SSHWorker:
 
     def _update_worker_queue(self):
         # Loop when results_q is empty
-        while 1:
+        while True:
             try:
                 result = self.results_q.get(timeout=0.05)
                 if result:
                     if result.get('remove'):
-                        # del self.ssh_connection[result['device_ip']]
                         self.ssh_connection.remove_connection(result['device_ip'])
                     else:
                         self.ssh_connection.add_connection(result)
-                        # self.ssh_connection[result['device_ip']] = result['data']
             except Empty:
                 break
 
