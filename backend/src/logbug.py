@@ -140,3 +140,9 @@ _logbug = {'logbug': LogBug()}
 def init(level=0):
     _logbug['logbug'].log_level = level
     _logbug['logbug'].auto_run()
+
+def get():
+    if not _logbug['logbug']:
+        init()
+
+    return _logbug['logbug']
