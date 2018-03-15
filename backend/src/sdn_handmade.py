@@ -166,7 +166,6 @@ class Topology:
 
     def init(self):
         from pymongo import UpdateOne
-        # if self.mongo.flow_seq.find_one() is None:
         op = []
         for i in range(0, 65535):
             op.append(
@@ -181,7 +180,7 @@ class Topology:
         """ Start topology loop
         """
         if not self.app_service.is_running():
-            # Resetting snmp status
+            # Resetting SNMP status
             devices = self.device_service.get_all()
             for device in devices:
                 self.device_service.set_snmp_running(device['management_ip'], False)
@@ -194,10 +193,11 @@ class Topology:
         """ Shutdown topology
         """
         self.app_service.set_running(False)
+
         self._snmp_worker.shutdown()
+
         self._netflow_worker.shutdown()
         self._netflow_worker.join()
-        logging.debug("Shutdown Netflow server complete")
 
     def get_device_by_ip(self, ip):
         """ Get device object by IP address
