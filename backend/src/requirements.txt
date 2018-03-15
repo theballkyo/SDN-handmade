@@ -8,4 +8,4 @@ ipcalc==1.99.0
 matplotlib==2.1.2
 netaddr==0.7.19
 scipy==1.0.0
-uvloop==0.9.1
+# uvloop==0.9.1
