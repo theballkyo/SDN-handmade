@@ -101,8 +101,8 @@ class SSHWorker:
                     'device_ip': device['management_ip'],
                     'data': {
                         'ssh_info': ssh_info,
-                        'work_q': Queue(),
-                        'result_q': Queue(),
+                        'work_q': Queue(maxsize=1),
+                        'result_q': Queue(maxsize=1),
                         'is_connect_value': self.manager.Value(bool, False),
                         'stop_signal_value': self.manager.Value(bool, False)
                     }
