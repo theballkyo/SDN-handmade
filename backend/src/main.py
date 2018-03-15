@@ -17,11 +17,6 @@ def main():
     from api.rest_server import RestServer
 
     lb.init()
-    # log_bug = lb.LogBug(queue)
-    # Start listener_thread
-    # threading.Thread(target=log_bug.listener_thread, daemon=True).start()
-
-    # log_bug.worker_config()
 
     # Create topology
     topology = sdn.Topology(
@@ -34,22 +29,21 @@ def main():
 
     # Start REST API Server
     # Todo change from thread to multiprocessing
-    # mp.Process(target=rest_server.__run__, daemon=True).start()
     rest_server = RestServer()
     rest_server.run()
 
     # Start CLI
     cli = CLIController()
-    cli.init(topology, log_bug, settings.app['version'])
+    cli.init(topology, lb.get(), settings.app['version'])
 
     cli.cmdloop("Welcome to SDN Handmade. Type help to list commands.\n")
 
-    log_bug.pre_shutdown()
+    lb.get().pre_shutdown()
     time.sleep(0.5)
     topology.shutdown()
     rest_server.shutdown()
     time.sleep(0.5)
-    log_bug.post_shutdown()
+    lb.get().post_shutdown()
 
 
 if __name__ == '__main__':
