@@ -1,6 +1,6 @@
 from time import time
 
-from service.base_service import BaseService
+from repository.base_service import BaseService
 from pymongo import UpdateOne
 
 

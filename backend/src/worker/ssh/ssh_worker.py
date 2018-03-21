@@ -146,11 +146,12 @@ class SSHWorker:
             self._update_worker_queue()
             try:
                 logging.info("Start task")
-                logging.info(self.tasks)
+                logging.info("Tasks: {}".format(self.tasks))
                 for task in self.tasks:
                     task.run(self.ssh_connection)
                 logging.info("End task")
-                time.sleep(10)
+
+                time.sleep(1)
             except KeyboardInterrupt:
                 break
             except Exception as e:

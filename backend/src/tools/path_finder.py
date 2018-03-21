@@ -6,7 +6,7 @@ import netaddr
 import networkx as nx
 
 import generate_graph
-import service
+import repository
 import sdn_utils
 
 from enum import Enum, unique
@@ -35,8 +35,8 @@ class PathFinder:
         # Cache link information
         self.link_cache = {}
 
-        self.device_service = service.get_service("device")
-        self.route_service = service.get_service('route')
+        self.device_service = repository.get_service("device")
+        self.route_service = repository.get_service('route')
 
         # Create NetworkX graph
         self.graph = None
@@ -105,6 +105,9 @@ class PathFinder:
                 final_path = prev_path + [start_device_ip]
                 if start_device_ip != str(dst_ip):
                     final_path.append(str(dst_ip))
+                if len(prev_path) == 0:
+                    path.add(tuple([src_ip, str(dst_ip)]))
+                    return path
                 path.add(tuple(final_path))
                 return
             next_hop_device = self.device_service.device.find_one({
@@ -336,6 +339,18 @@ class PathFinder:
                     _links.append(link)
 
         return _links
+
+    def simulate_route(self, include_pending=False):
+        """
+        Step 1 Find in policy
+             1.1 if include pending, find in policy pending first
+             1.2 if not in policy pending, find in policy
+        Step 2 if not in policy, find in route table
+        Step 3 if not in route, return
+        :param include_pending:
+        :return:
+        """
+        raise NotImplementedError
 
     def plot(self):
         if self.auto_update_graph:

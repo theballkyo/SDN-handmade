@@ -1,5 +1,5 @@
 import netaddr
-from service import get_service
+from repository import get_service
 
 
 class Link:

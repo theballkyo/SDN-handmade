@@ -5,7 +5,7 @@ import netaddr
 
 import sdn_utils
 from flow import FlowState
-from service import BaseService
+from repository import BaseService
 
 
 # class PolicyAction:

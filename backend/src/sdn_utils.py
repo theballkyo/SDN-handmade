@@ -40,9 +40,17 @@ def seconds_to_datetime(seconds):
 
 
 def unix_to_datetime(unix_time):
-    # if not isinstance(unix_time, int):
-    #     raise ValueError('Unix time must be integer only.')
+    if not isinstance(unix_time, int) and not isinstance(unix_time, float):
+        raise ValueError('Unix time must be int or float only.')
     return datetime.datetime.fromtimestamp(unix_time)
+
+
+def datetime_now():
+    return datetime.datetime.now()
+
+
+def fraction_to_percent(numerator, denominator):
+    return numerator / denominator * 100
 
 
 def cal_bw_usage_percent(octets, if_speed, in_time):

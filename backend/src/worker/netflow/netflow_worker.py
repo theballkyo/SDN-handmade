@@ -2,22 +2,27 @@ import logging
 import socket
 import threading
 import traceback
+from time import time
+from datetime import datetime, timedelta
 
-import service
+import sdn_utils
+import repository
 from netflow.netflow_packet import ExportPacket
 
 
 class NetflowWorker(threading.Thread):
 
-    def __init__(self, bind_ip, bind_port):
+    def __init__(self, bind_ip, bind_port, active_time=60, inactive_time=20):
         threading.Thread.__init__(self)
         self.bind_ip = bind_ip
         self.bind_port = bind_port
+        self.active_time = active_time
+        self.inactive_time = inactive_time
         self.sock = None
         self.stop_flag = False
         self.device = []
         self.daemon = True
-        self.netflow_service = service.get_service('netflow')
+        self.netflow_service = repository.get_service('netflow')
         # Setting thread name
         self.name = 'netflow-sv'
 
@@ -37,19 +42,34 @@ class NetflowWorker(threading.Thread):
                 if data == b'stop':
                     continue
 
-                logging.debug("Received data from {}, length {}".format(sender, len(data)))
+                logging.info("Received data from {}, length {}".format(sender, len(data)))
 
                 export = ExportPacket(data, _templates)
 
                 # Update templates
                 _templates.update(export.templates)
 
-                flow_data = []
+                flows = []
+                created_at = sdn_utils.datetime_now()
+                packet_datetime = datetime.fromtimestamp(export.header.timestamp)
                 for flow in export.flows:
-                    flow.data['from_ip'] = str(sender[0])
-                    flow_data.append(flow.data)
+                    # Check flow is active or inactive
+                    # It updated only is flow is active
+                    # Inactive
+                    if flow.data['last_switched'] + timedelta(seconds=self.inactive_time) > packet_datetime:
+                        pass
+                    # Active
+                    else:
+                        flow.data['from_ip'] = str(sender[0])
+                        flow.data['created_at'] = created_at
+                        flows.append(flow.data)
 
-                self.netflow_service.insert_many(flow_data)
+                    # Remove flows are not active
+                    # TODO
+
+                logging.info("Flow: {}, {}".format(len(export.flows), len(flows)))
+
+                self.netflow_service.update_flows(flows)
 
             except Exception:
                 logging.info(traceback.format_exc())

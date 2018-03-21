@@ -56,7 +56,7 @@ class Device:
 
     def mark_offline(self):
         # TODO
-        # device service increase_offline_count
+        # device repository increase_offline_count
         raise NotImplementedError()
 
     def get_status(self):

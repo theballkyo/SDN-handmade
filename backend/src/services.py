@@ -36,7 +36,7 @@ class CdpService(Service):
 
 
 class DeviceService(Service):
-    """ Device service
+    """ Device repository
     """
 
     def __init__(self, *args, **kwargs):
@@ -303,7 +303,7 @@ _SERVICES = {
 def get_service(name):
     pid = os.getpid()
     if name not in _SERVICES:
-        raise ValueError("No service name: {}".format(name)
+        raise ValueError("No repository name: {}".format(name)
                          )
     if pid not in _cache[name]:
         _cache[name]['pid'] = _SERVICES[name]()

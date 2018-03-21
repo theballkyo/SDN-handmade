@@ -1,14 +1,14 @@
 from netaddr import IPNetwork
 
 from snmp import snmp_async
-import service
+import repository
 import sdn_utils
 import time
 
 
 async def process_cdp(host, community, port):
-    cdp_service = service.get_service('cdp')
-    device_service = service.get_service('device')
+    cdp_service = repository.get_service('cdp')
+    device_service = repository.get_service('device')
     cdp = await snmp_async.get_cdp(host, community, port)
 
     if cdp is None:
@@ -35,7 +35,7 @@ async def process_cdp(host, community, port):
 
 
 async def process_system(host, community, port):
-    device_service = service.get_service('device')
+    device_service = repository.get_service('device')
     system_info = await snmp_async.get_system_info(host, community, port)
     ip_addrs = await snmp_async.get_ip_addr(host, community, port)
     interfaces = await snmp_async.get_interfaces(host, community, port)
@@ -136,7 +136,7 @@ async def process_system(host, community, port):
 
 
 async def process_route(host, community, port):
-    route_service = service.get_service('route')
+    route_service = repository.get_service('route')
     routes = await snmp_async.get_routes(host, community, port)
 
     if routes is None:

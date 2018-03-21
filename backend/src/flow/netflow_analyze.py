@@ -11,4 +11,4 @@ class NetflowAnalyze(BaseFlowAnalyze):
         extra_match = {
             'l4_src_port': 443
         }
-        return self.netflow_service.get_ingress_flow(start_time, end_time, extra_match=extra_match)
+        return self.netflow_service.get_ingress_flow(start_time, end_time, addition_match=extra_match)

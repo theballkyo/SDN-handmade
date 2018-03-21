@@ -1,15 +1,15 @@
-from service.app_service import AppService
-from service.base_service import BaseService
-from service.cdp_service import CdpService
-from service.device_service import DeviceService
-from service.link_service import LinkService
-from service.netflow_service import NetflowService
-from service.policy_log_service import PolicyLogService
-from service.policy_seq_service import PolicySeqService
-from service.policy_service import PolicyRoute, PolicyService
-from service.route_service import RouteService
-from service.topology_path_service import TopologyPathService
-from service.topology_service import TopologyService
+from repository.app_service import AppService
+from repository.base_service import BaseService
+from repository.cdp_service import CdpService
+from repository.device_service import DeviceService
+from repository.link_service import LinkService
+from repository.netflow_service import NetflowService
+from repository.policy_log_service import PolicyLogService
+from repository.policy_seq_service import PolicySeqService
+from repository.policy_service import PolicyRoute, PolicyService
+from repository.route_service import RouteService
+from repository.topology_path_service import TopologyPathService
+from repository.topology_service import TopologyService
 
 _services = {}
 
@@ -35,7 +35,7 @@ def get_service(name):
         name += '_service'
 
     if name not in _list_service.keys():
-        raise ValueError("No service name %s", name)
+        raise ValueError("No repository name %s", name)
     if _services.get(name) is None:
         _services[name] = _list_service[name]()
 

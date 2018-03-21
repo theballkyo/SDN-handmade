@@ -1,4 +1,4 @@
-from service import BaseService
+from repository import BaseService
 import logging
 import pprint
 
@@ -202,3 +202,39 @@ class NetflowService(BaseService):
         return self.netflow.aggregate([
             {'$match': match_1}, {'$project': project_1}, {'$match': match_2}, {'$group': group}, {'$sort': sort}
         ])
+
+    def get_flows(self, sort_by='in_bytes', limit=1):
+        return self.netflow.find().sort({sort_by: -1}).limit(limit)
+
+    def update_flows(self, flows):
+        not_keys = ('first_switched', 'last_switched', 'in_bytes', 'in_pkts', 'out_bytes', 'out_pkts', 'created_at')
+        for flow in flows:
+            _flow = flow.copy()
+            for key in not_keys:
+                try:
+                    _flow.pop(key)
+                except KeyError:
+                    pass
+
+            self.netflow.update_one({
+                # 'ipv4_src_addr': flow['ipv4_src_addr'],
+                # 'ipv4_dst_addr': flow['ipv4_dst_addr'],
+                # 'protocol': flow['protocol'],
+                # 'l4_src_port': flow['l4_src_port'],
+                # 'l4_dst_port': flow['l4_dst_port'],
+                # 'src_mask': flow['src_mask'],
+                # 'dst_mask': flow['dst_mask'],
+                # 'input_snmp': flow['input_snmp'],
+                # 'output_snmp': flow['output_snmp'],
+                # 'src_as': flow['src_as'],
+                # 'dst_as': flow['dst_as'],
+                # 'ipv4_next_hop': flow['ipv4_netx_hop'],
+                #
+                # 'src_tos': flow['src_tos'],
+                # 'tcp_flags': flow['tcp_flags'],
+                # 'from_ip': flow['from_ip'],
+                # 'direction': flow['direction']
+                _flow
+            }, {
+                '$set': flow
+            }, upsert=True)

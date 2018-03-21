@@ -1,6 +1,7 @@
 import struct
 import sdn_utils
 from netflow.netflow_types import FIELD_TYPES, convert_to_ip
+import logging
 
 
 class DataRecord:
@@ -59,7 +60,8 @@ class DataFlowSet:
 
                 if field.field_type in (21, 22):
                     fdata = int(fdata)
-                    fdata = ((header.timestamp * 1000) - header.uptime) + fdata
+                    logging.info("%s:%s:%s", header.timestamp, header.uptime, fdata)
+                    fdata = (header.timestamp - (header.uptime / 1000)) + (fdata / 1000)
                     # Convert to second
                     # fdata /= 1000
                     fdata = sdn_utils.unix_to_datetime(fdata)

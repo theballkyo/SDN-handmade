@@ -1,4 +1,4 @@
-from service.base_service import BaseService
+from repository.base_service import BaseService
 
 
 class AppService(BaseService):

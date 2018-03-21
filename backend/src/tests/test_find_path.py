@@ -12,7 +12,8 @@ def main():
     print(path_finder.get_links())
     # print(path_finder.graph.edges["192.168.1.2", "192.168.1.1"])
     # pprint.pprint(path_finder.graph)
-    # path1 = path_finder.all_by_manage_ip("192.168.1.1", "192.168.1.13")
+    # path1 = path_finder.all_by_manage_ip("192.168.1.1", "192.168.1.2")
+    # list(path1)
     # print("all_by_manage_ip 192.168.1.1 to 192.168.1.13")
     # pprint.pprint(list(path1))
     #
@@ -26,8 +27,8 @@ def main():
     #
     # print("=" * 100)
     # print("Active path: 192.168.1.1 to 192.168.1.13")
-    # path3 = path_finder.active_by_manage_ip('192.168.1.1', '192.168.1.13')
-    # pprint.pprint(path3)
+    path3 = path_finder.active_by_manage_ip('192.168.1.1', '192.168.1.2')
+    pprint.pprint(path3)
     # for path in map(nx.utils.pairwise, path3):
     #     for pp in path:
     #         try:

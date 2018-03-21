@@ -4,7 +4,7 @@ matplotlib.use('Agg')
 
 
 def main():
-    from worker.monitor.policy_monitor_task import PolicyMonitorTask
+    from task.monitor.policy_monitor_task import PolicyMonitorTask
 
     pmt = PolicyMonitorTask()
     pmt.run()

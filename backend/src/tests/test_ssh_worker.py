@@ -1,8 +1,7 @@
 from worker.ssh.ssh_worker import SSHWorker
-from worker.monitor.policy_monitor_task import PolicyMonitorTask
+from task.monitor.policy_monitor_task import PolicyMonitorTask
 from threading import Thread
 import logging
-import logbug
 import timeit
 
 

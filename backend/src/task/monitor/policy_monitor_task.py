@@ -1,7 +1,7 @@
 import pprint
 from time import time
 
-from service import get_service
+from repository import get_service
 from router_command.policy_command import generate_action_command, generate_policy_command
 import logging
 from worker.ssh.ssh_worker import SSHConnection
@@ -42,14 +42,22 @@ class PolicyMonitorTask:
         return diff_policy
 
     def run(self, ssh_connection: SSHConnection) -> None:
-        # 1 Find pending policy
-        # 2 Find current policy
-        # 3.1 If not have current policy -> Add new
-        # 3.2 If have, Call diff function -> Update
-        # 4 Update policy
-        # 5 SSH -> Device
-        # 6 Update to policy table and remove in policy pending
+        """
+        1 Find pending policy
+        2 Find current policy
+        3 Process policy to update
+          |> 3.1 If not have current policy -> Add new
+          |> 3.2 If have, Call diff function -> Update
+        4 Update policy
+        5 SSH -> Device
+        6 Update to policy table and remove in policy pending
+
+        :param ssh_connection:
+        :return:
+        """
         logging.info("Policy monitor task is running...")
+
+        # Step 1
         new_policy = self.policy_service.policy_pending.find_one({}, sort=[('time', -1)])
         if not new_policy:
             return
@@ -57,7 +65,9 @@ class PolicyMonitorTask:
         # Remove policy
         if new_policy.get('type') == 'remove':
             pass
+            return
 
+        # Step 2
         # Automatic check exist flow
         if new_policy['policy'].get('name'):
             current_policy = self.policy_service.policy.find_one({
@@ -77,6 +87,7 @@ class PolicyMonitorTask:
                 'dst_port': new_policy['policy']['dst_port']
             })
 
+        # Step 3.2 Find diff
         if current_policy:
             policy_id = current_policy['policy_id']
             policy_name = current_policy['name']
@@ -84,7 +95,7 @@ class PolicyMonitorTask:
             pprint.pprint(diff_policy)
             actions = diff_policy['actions']
             policy = diff_policy['policy']
-        else:
+        else:  # 3.2 New policy
             policy_id = self.policy_seq_service.get_new_id()
             if not policy_id:
                 raise ValueError('Policy ID is not available')
@@ -97,6 +108,7 @@ class PolicyMonitorTask:
         new_policy['policy']['name'] = policy_name
         new_policy['policy']['policy_id'] = policy_id
 
+        # Step 4 update policy
         policy_cmd = None
         if policy != 'not_changed':
             policy_cmd = generate_policy_command('cisco_ios', policy)
@@ -112,13 +124,15 @@ class PolicyMonitorTask:
 
         pprint.pprint(new_policy['policy'])
 
+        # Step 5 SSH to device(s)
         connect = ssh_connection.check_connection(device_list.keys())
         # pprint.pprint(connect)
         if not all(connect):
             logging.info("Some device can't SSH")
             return
-        else:
-            logging.info("Update...")
-            ssh_connection.send_config_set(device_list)
-            self.policy_service.set_policy(new_policy['policy'])
-            self.policy_service.remove_pending(new_policy['_id'])
+        logging.info("Update...")
+        ssh_connection.send_config_set(device_list)
+
+        # Step 6 Update policy table
+        self.policy_service.set_policy(new_policy['policy'])
+        self.policy_service.remove_pending(new_policy['_id'])

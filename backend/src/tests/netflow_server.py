@@ -1,9 +1,10 @@
 from worker.netflow.netflow_worker import NetflowWorker
-import logging
+import logbug
+import settings
 
 
 def main():
-    netflow_worker = NetflowWorker("0.0.0.0", 23456)
+    netflow_worker = NetflowWorker(settings.netflow['bind_ip'], settings.netflow['bind_port'])
     try:
         netflow_worker.start()
         netflow_worker.join()
@@ -12,5 +13,5 @@ def main():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s [%(levelname)s] (%(threadName)-10s): %(message)s',)
+    logbug.init()
     main()

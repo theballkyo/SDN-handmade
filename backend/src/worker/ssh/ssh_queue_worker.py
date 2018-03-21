@@ -72,7 +72,7 @@ class SSHQueueWorker(threading.Thread):
                     try:
                         work = self._work_queue.get(timeout=120)
                     except queue.Empty:
-                        work = None
+                        continue
                 else:
                     break
 
@@ -85,11 +85,11 @@ class SSHQueueWorker(threading.Thread):
                     reconnect = True
                 logging.info("End find prompt")
 
-                if not work:
-                    continue
                 if not isinstance(work, dict):
+                    self._result_q.put("error")
                     continue
                 if not work.get('type', None):
+                    self._result_q.put("error")
                     continue
 
                 if work['type'] == 'recheck':

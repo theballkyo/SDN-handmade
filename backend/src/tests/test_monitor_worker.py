@@ -2,7 +2,7 @@ import matplotlib
 
 matplotlib.use('Agg')
 
-from worker.monitor.traffic_monitor_task import TrafficMonitorTask
+from task.monitor.traffic_monitor_task import TrafficMonitorTask
 
 
 def main():
@@ -11,7 +11,6 @@ def main():
 
 
 if __name__ == '__main__':
-    import logging
     import logbug
     logbug.init()
     # logbug = logbug.LogBug(

@@ -3,7 +3,7 @@ import logging
 import netaddr
 import networkx as nx
 
-import service
+import repository
 import sdn_utils
 
 
@@ -12,9 +12,9 @@ def create_networkx_graph(devices, add_link=True):
     """
     networkx = nx.Graph()
 
-    cdp_service = service.get_service('cdp')
-    device_service = service.get_service('device')
-    link_service = service.get_service('link')
+    cdp_service = repository.get_service('cdp')
+    device_service = repository.get_service('device')
+    link_service = repository.get_service('link')
 
     link_list = []
 
@@ -150,8 +150,8 @@ def create_networkx_graph(devices, add_link=True):
 
 
 def get_all_subnet():
-    cdp_service = service.get_service('cdp')
-    device_service = service.get_service('device')
+    cdp_service = repository.get_service('cdp')
+    device_service = repository.get_service('device')
     devices = device_service.get_active()
     subnet_list = {}
     for device in devices:

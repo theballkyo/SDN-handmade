@@ -1,5 +1,5 @@
 import logging
-from service import get_flow_table_service
+from repository import get_flow_table_service
 from flow import FlowState
 from services import get_service
 from router_command import generate_action_command, generate_policy_command

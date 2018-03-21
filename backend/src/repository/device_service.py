@@ -1,10 +1,10 @@
 import time
 
-from service import BaseService
+from repository import BaseService
 
 
 class DeviceService(BaseService):
-    """ Device service
+    """ Device repository
     """
 
     def __init__(self, *args, **kwargs):

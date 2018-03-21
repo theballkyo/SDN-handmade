@@ -1,4 +1,4 @@
-from service import BaseService
+from repository import BaseService
 import netaddr
 
 

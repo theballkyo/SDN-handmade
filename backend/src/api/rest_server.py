@@ -2,6 +2,7 @@ from flask import Flask, request
 import multiprocessing as mp
 import settings
 
+
 class RestServer:
     app = Flask(__name__)
 
@@ -14,7 +15,7 @@ class RestServer:
 
     def run(self):
         self.server = mp.Process(target=self._run, daemon=True).start()
-    
+
     def _run(self):
         self.app.run(host=settings.rest_api['host'], port=settings.rest_api['port'])
 
