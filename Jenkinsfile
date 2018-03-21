@@ -20,11 +20,11 @@ node {
                 /* This builds the actual image; synonymous to
                 * docker build on the command line */
                 if (branch == 'develop') {
-                    app = docker.build("registry.ryoka.tk/sdn_backend:latest")
+                    app = docker.build("registry.docker.ryoka.tk/sdn_backend:latest")
                 } else if (branch == 'master') {
-                    app = docker.build("registry.ryoka.tk/sdn_backend:stable")
+                    app = docker.build("registry.docker.ryoka.tk/sdn_backend:stable")
                 } else {
-                    app = docker.build("registry.ryoka.tk/sdn_backend:${branch}")
+                    app = docker.build("registry.docker.ryoka.tk/sdn_backend:${branch}")
                 }
             }
 
@@ -44,11 +44,11 @@ node {
 
     stage('Push docker image') {
         if (branch == 'develop') {
-            docker.withRegistry('https://registry.ryoka.tk', 'docker-registry') {
+            docker.withRegistry('https://registry.docker.ryoka.tk', 'docker-registry') {
                 app.push("develop")
             }
         } else if (branch == 'master') {
-            docker.withRegistry('https://registry.ryoka.tk', 'docker-registry') {
+            docker.withRegistry('https://registry.docker.ryoka.tk', 'docker-registry') {
                 app.push()
             }
         }
