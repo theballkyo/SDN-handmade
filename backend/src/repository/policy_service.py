@@ -1,10 +1,11 @@
+import logging
+from typing import Optional, Dict
+
 import netaddr
 
-from service import BaseService
+import sdn_utils
 from flow import FlowState
-import logging
-import time
-from typing import Optional, Dict
+from service import BaseService
 
 
 # class PolicyAction:
@@ -24,7 +25,7 @@ class PolicyRoute:
               'time'
               )
 
-    def __init__(self, policy: Dict, **kwargs):
+    def __init__(self, policy=None, **kwargs):
         # TODO Support port
         self.src_network = None
         self.dst_network = None
@@ -32,31 +33,34 @@ class PolicyRoute:
         for field in self.FIELDS:
             setattr(self, field, None)
 
-        for field, value in policy.items():
-            if field in self.FIELDS:
-                setattr(self, field, value)
+        if policy:
+            for field, value in policy.items():
+                if field in self.FIELDS:
+                    setattr(self, field, value)
 
-        self.policy = {}
-        if policy.get('actions'):
-            self.actions = policy['actions'].copy()
+            self.policy = {}
+            if policy.get('actions'):
+                self.actions = policy['actions'].copy()
+            else:
+                self.actions = {}
         else:
+            self.policy = {}
             self.actions = {}
 
+        self.info = {}
+
     def set_policy(self, **kwargs):
-        for key, value in kwargs:
-            self.policy[key] = value
+        if kwargs.get('src_network'):
+            self.src_network = netaddr.IPNetwork(kwargs.get('src_network'))
+
+        if kwargs.get('dst_network'):
+            self.dst_network = netaddr.IPNetwork(kwargs.get('dst_network'))
 
     def set_action(self, action: Dict[str, Optional[str]]):
-        pass
+        raise NotImplementedError()
 
     def diff(self, new_policy):
-        pass
-
-    # if kwargs.get('src_network'):
-    #     self.src_network = netaddr.IPNetwork(kwargs.get('src_network'))
-    #
-    # if kwargs.get('dst_network'):
-    #     self.dst_network = netaddr.IPNetwork(kwargs.get('dst_network'))
+        raise NotImplementedError()
 
     def add_action(self, node, action, data=None):
         self.actions[str(netaddr.IPAddress(node).value)] = {
@@ -86,7 +90,8 @@ class PolicyRoute:
             'dst_ip': str(self.dst_network.ip),
             'dst_port': None,
             'dst_wildcard': str(self.dst_network.hostmask),
-            'actions': self.actions.copy()
+            'actions': self.actions.copy(),
+            'info': self.info
         }
 
 
@@ -121,20 +126,54 @@ class PolicyService(BaseService):
         self.policy_pending.insert_one({
             'type': 'update',
             'policy': policy,
-            'time': time.time()
+            'time': sdn_utils.datetime_now()
         })
 
-    def get_pending(self, limit=None):
-        policy_list = self.policy_pending.find({}).sort('time', 1)
+    def get_pending(self, limit=None, device_ip=None):
+
+        policy_list = self.policy_pending.find({})
+        policy_list.sort('time', 1)
 
         if limit:
             policy_list.limit(limit)
 
         return policy_list
 
+    def sum_bytes_pending_has_pass_interface(self, interface_ip, limit=1, side='in'):
+        if side == 'in':
+            side = 'policy.info.old_path_link.in'
+            new_side = 'policy.info.new_path_link.in'
+        else:
+            side = 'policy.info.old_path_link.out'
+            new_side = 'policy.info.new_path_link.out'
+
+        policy_list = self.policy_pending.aggregate([
+            {
+                '$match': {
+                    side: interface_ip,
+                    new_side: {'$ne': interface_ip}
+                }
+            },
+            {
+                '$group': {
+                    '_id': {
+                        'interface_ip': "$" + side
+                    },
+                    'total': {
+                        '$sum': '$policy.info.total_in_bytes'
+                    }
+                }
+            },
+            {
+                '$limit': limit
+            }
+        ])
+
+        return policy_list
+
     def set_policy(self, policy):
         # Update time
-        policy['time'] = time.time()
+        policy['time'] = sdn_utils.datetime_now()
         self.policy.replace_one({
             'policy_id': policy['policy_id']
         }, policy, upsert=True)
