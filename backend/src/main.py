@@ -7,8 +7,6 @@ import logging
 def main():
     """ Run SDN Controller Server
     """
-    import multiprocessing as mp
-    import threading
     import time
     import logbug as lb
     import sdn_handmade as sdn
@@ -16,7 +14,7 @@ def main():
     import settings
     from api.rest_server import RestServer
 
-    lb.init()
+    lb.init(logging.INFO)
 
     # Create topology
     topology = sdn.Topology(
