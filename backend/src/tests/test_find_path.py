@@ -27,8 +27,8 @@ def main():
     #
     # print("=" * 100)
     # print("Active path: 192.168.1.1 to 192.168.1.13")
-    path3 = path_finder.active_by_manage_ip('192.168.1.1', '192.168.1.2')
-    pprint.pprint(path3)
+    # path3 = path_finder.all_by_manage_ip('192.168.1.1', '192.168.1.13')
+    # pprint.pprint(path3)
     # for path in map(nx.utils.pairwise, path3):
     #     for pp in path:
     #         try:
@@ -66,14 +66,15 @@ def main():
     # path6 = path_finder.lowest_speed('192.168.1.1', '192.168.1.13')
     # pprint.pprint(path6)
     #
-    # print("=" * 100)
-    # print("find_by_available_bandwidth (highest, None): 192.168.1.1 to 192.168.1.13")
-    # path7 = path_finder.find_by_available_bandwidth(
-    #     '192.168.1.1',
-    #     '192.168.1.13',
-    #     PathFinder.SelectBy.HIGHEST
-    # )
-    # pprint.pprint(path7)
+    print("=" * 100)
+    print("find_by_available_bandwidth (highest, None): 192.168.1.1 to 192.168.1.10")
+    path7 = path_finder.find_by_available_bandwidth(
+        '192.168.1.1',
+        '192.168.1.10',
+        PathFinder.SelectBy.HIGHEST,
+        10
+    )
+    pprint.pprint(path7)
     #
     # print("=" * 100)
     # print("find_by_available_bandwidth (lowest, None): 192.168.1.1 to 192.168.1.13")

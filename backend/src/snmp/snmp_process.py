@@ -4,6 +4,7 @@ from snmp import snmp_async
 import repository
 import sdn_utils
 import time
+import logging
 
 
 async def process_cdp(host, community, port):
@@ -37,8 +38,8 @@ async def process_cdp(host, community, port):
 async def process_system(host, community, port):
     device_service = repository.get_service('device')
     system_info = await snmp_async.get_system_info(host, community, port)
-    ip_addrs = await snmp_async.get_ip_addr(host, community, port)
     interfaces = await snmp_async.get_interfaces(host, community, port)
+    ip_addrs = await snmp_async.get_ip_addr(host, community, port)
 
     if not system_info:
         print("SNMP (Process system [sys info]): host {} is down".format(host))
@@ -64,62 +65,58 @@ async def process_system(host, community, port):
         'management_ip': host
     })
 
-    if my_device.get('interfaces'):
-        for if_index, interface in enumerate(interfaces):
-            for my_interface in my_device['interfaces']:
-                if interface['description'] == my_interface['description']:
-                    # In
-                    in_octets = interface['in_octets'] - my_interface['in_octets']
-                    in_in_time = system_info['uptime'] - my_device['uptime']
-                    bw_in_usage_percent = sdn_utils.cal_bw_usage_percent(
-                        in_octets,
-                        interface['speed'],
-                        in_in_time)
-                    # Out
-                    out_octets = interface['out_octets'] - my_interface['out_octets']
-                    out_in_time = system_info['uptime'] - my_device['uptime']
-                    bw_out_usage_percent = sdn_utils.cal_bw_usage_percent(
-                        out_octets,
-                        interface['speed'],
-                        out_in_time)
+    try:
+        if my_device.get('interfaces'):
+            for if_index, interface in enumerate(interfaces):
+                for my_interface in my_device['interfaces']:
+                    if interface['description'] == my_interface['description']:
+                        # In
+                        in_octets = interface['in_octets'] - my_interface['in_octets']
+                        in_in_time = system_info['uptime'] - my_device['uptime']
+                        bw_in_usage_percent = sdn_utils.cal_bw_usage_percent(
+                            in_octets,
+                            interface['speed'],
+                            in_in_time)
+                        # Out
+                        out_octets = interface['out_octets'] - my_interface['out_octets']
+                        out_in_time = system_info['uptime'] - my_device['uptime']
+                        bw_out_usage_percent = sdn_utils.cal_bw_usage_percent(
+                            out_octets,
+                            interface['speed'],
+                            out_in_time)
 
-                    # Add information
-                    interface['bw_in_usage_octets'] = in_octets
-                    interface['bw_in_usage_persec'] = (in_octets / in_in_time) * 8
-                    interface['bw_in_usage_percent'] = bw_in_usage_percent
+                        # Add information
+                        interface['bw_in_usage_octets'] = in_octets
+                        interface['bw_in_usage_persec'] = sdn_utils.bandwidth_usage_percent_to_bit(interface['speed'],
+                                                                                                   bw_in_usage_percent)
+                        interface['bw_in_usage_percent'] = bw_in_usage_percent
 
-                    interface['bw_out_usage_octets'] = out_octets
-                    interface['bw_out_usage_persec'] = (out_octets / out_in_time) * 8
-                    interface['bw_out_usage_percent'] = bw_out_usage_percent
+                        interface['bw_out_usage_octets'] = out_octets
+                        # interface['bw_out_usage_persec'] = (out_octets / out_in_time) * 8
+                        interface['bw_out_usage_persec'] = sdn_utils.bandwidth_usage_percent_to_bit(interface['speed'],
+                                                                                                    bw_out_usage_percent)
+                        interface['bw_out_usage_percent'] = bw_out_usage_percent
 
-                    interface['bw_usage_update'] = time.time()
+                        interface['bw_usage_update'] = time.time()
 
-                    if interface.get('ipv4_address'):
-                        ip = IPNetwork("{}/{}".format(interface['ipv4_address'], interface['subnet']))
+                        if interface.get('ipv4_address'):
+                            ip = IPNetwork("{}/{}".format(interface['ipv4_address'], interface['subnet']))
 
-                        if ip.size == 1:
-                            start_ip = ip.first
-                            end_ip = ip.first
-                        elif ip.size == 2:
-                            start_ip = ip.first
-                            end_ip = ip.last
-                        else:
-                            start_ip = ip.first
-                            end_ip = ip.last
+                            if ip.size == 1:
+                                start_ip = ip.first
+                                end_ip = ip.first
+                            elif ip.size == 2:
+                                start_ip = ip.first
+                                end_ip = ip.last
+                            else:
+                                start_ip = ip.first
+                                end_ip = ip.last
 
-                        interface['start_ip'] = start_ip
-                        interface['end_ip'] = end_ip
-
-                    # logging.debug(
-                    #     ' || BW in usage %.3f%% || %d bytes',
-                    #     bw_in_usage_percent,
-                    #     in_octets)
-                    #
-                    # logging.debug(
-                    #     ' || BW out usage %.3f%% || %d bytes',
-                    #     bw_out_usage_percent,
-                    #     out_octets)
-                    break
+                            interface['start_ip'] = start_ip
+                            interface['end_ip'] = end_ip
+                        break
+    except Exception as e:
+        logging.debug("Except: %s", e)
 
     system_info['interfaces'] = interfaces
 

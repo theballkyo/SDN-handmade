@@ -5,6 +5,11 @@ def generate_config_command(flow):
     pass
 
 
+def generate_remove_command(device_type, policy):
+    if device_type == 'cisco_ios':
+        return cisco_ios_cmd.generate_remove_command(policy)
+
+
 def generate_policy_command(device_type, policy):
     if device_type == 'cisco_ios':
         # cmd = CiscoIosFlowCommand(flow)

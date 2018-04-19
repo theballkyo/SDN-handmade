@@ -52,10 +52,12 @@ def generate_policy_command(policy):
         _acl_cmd += " {} {}".format(acl_src_cmd, acl_dst_cmd)
         acl_cmd.append(_acl_cmd)
     else:
+        i = 1
         for protocol in ACCEPT_PROTOCOL:
-            _acl_cmd = "10 permit {}".format(protocol)
+            _acl_cmd = "{} permit {}".format(i * 10, protocol)
             _acl_cmd += " {} {}".format(acl_src_cmd, acl_dst_cmd)
             acl_cmd.append(_acl_cmd)
+            i += 1
 
     return [clear_acl, acl_name, acl_remark] + acl_cmd
 
@@ -142,3 +144,11 @@ def generate_action_command(policy_id, policy_name, action):
         route_map04 = ''
 
     return [route_map00, route_map01, route_map02, route_map04]
+
+
+def generate_remove_command(policy):
+    policy_id = policy['policy_id']
+
+    acl = "no ip access-list extended {}".format(generate_acl_name(policy_id))
+    route_map = "no route-map SDN-handmade permit {}".format(policy_id)
+    return [route_map, acl]

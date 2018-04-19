@@ -11,3 +11,9 @@ class PolicySeqService(BaseService):
         if seq:
             return seq['_id']
         return None
+
+    def set_use_id(self, _id):
+        self.seq.update_one({'_id': _id}, {'$set': {'in_use': True}})
+
+    def set_not_use_id(self, _id):
+        self.seq.update_one({'_id': _id}, {'$set': {'in_use': False}})

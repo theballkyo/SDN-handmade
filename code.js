@@ -137,3 +137,9 @@ db.getCollection('netflow').aggregate([
         $limit: 100
     }
 ])
+
+// Select only interface in matching
+db.items.aggregate(
+      {$unwind:"$items"},
+      {$match:{"items.return":true}}
+)

@@ -21,7 +21,7 @@ class NetflowWorker(threading.Thread):
         self.sock = None
         self.stop_flag = False
         self.device = []
-        self.daemon = True
+        self.daemon = False
         self.netflow_service = repository.get_service('netflow')
         # Setting thread name
         self.name = 'netflow-sv'
@@ -56,14 +56,17 @@ class NetflowWorker(threading.Thread):
                     # Check flow is active or inactive
                     # It updated only is flow is active
                     # Inactive
-                    if flow.data['last_switched'] + timedelta(seconds=self.inactive_time) > packet_datetime:
-                        pass
+                    if flow.data['last_switched'] + timedelta(seconds=self.inactive_time) < packet_datetime:
+                        flow_type = 'inactive'
                     # Active
                     else:
                         flow.data['from_ip'] = str(sender[0])
                         flow.data['created_at'] = created_at
                         flows.append(flow.data)
+                        flow_type = 'active'
 
+                    # logging.debug("[%s] %s <=> %s | %s %s", flow_type, flow.data['ipv4_src_addr'], flow.data['ipv4_dst_addr'],
+                    #               flow.data['last_switched'], packet_datetime)
                     # Remove flows are not active
                     # TODO
 

@@ -76,14 +76,14 @@ class SSHQueueWorker(threading.Thread):
                 else:
                     break
 
-                logging.info("Start find prompt")
+                # logging.info("Start find prompt")
                 try:
                     net_connect.find_prompt(delay_factor=1)
                     self._is_connect.value = True
                 except ValueError:
                     self._is_connect.value = False
                     reconnect = True
-                logging.info("End find prompt")
+                # logging.info("End find prompt")
 
                 if not isinstance(work, dict):
                     self._result_q.put("error")
@@ -102,7 +102,10 @@ class SSHQueueWorker(threading.Thread):
                 if work['type'] == 'send_config':
                     # Send config
                     logging.info("Start send config")
-                    output = net_connect.send_config_set(work['data'])
+                    try:
+                        output = net_connect.send_config_set(work['data'], max_loops=450)
+                    except ValueError as e:
+                        output = e
                     logging.info("End send config")
                     self._result_q.put(output)
 

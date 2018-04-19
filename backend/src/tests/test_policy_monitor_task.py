@@ -7,7 +7,7 @@ def main():
     from task.monitor.policy_monitor_task import PolicyMonitorTask
 
     pmt = PolicyMonitorTask()
-    pmt.run()
+    pmt.run(None)
 
 
 if __name__ == '__main__':

@@ -37,7 +37,7 @@ class PolicyMonitorTask:
             else:
                 diff_policy['actions'][key] = {
                     'action': 'remove',
-                    'node': action['management_ip']
+                    'management_ip': action['management_ip']
                 }
         return diff_policy
 
@@ -97,7 +97,7 @@ class PolicyMonitorTask:
             policy = diff_policy['policy']
         else:  # 3.2 New policy
             policy_id = self.policy_seq_service.get_new_id()
-            if not policy_id:
+            if policy_id is None:
                 raise ValueError('Policy ID is not available')
 
             policy_name = "generate-{:.0f}".format(time() * 1000)
@@ -120,7 +120,8 @@ class PolicyMonitorTask:
             pprint.pprint(cmd)
             if policy_cmd:
                 cmd += policy_cmd
-            device_list[action['management_ip']] = cmd
+            device_list[action['management_ip']] = ["\n".join(cmd)]
+            # device_list[action['management_ip']] = cmd
 
         pprint.pprint(new_policy['policy'])
 
@@ -136,3 +137,5 @@ class PolicyMonitorTask:
         # Step 6 Update policy table
         self.policy_service.set_policy(new_policy['policy'])
         self.policy_service.remove_pending(new_policy['_id'])
+        # Set policy seq to in_use is True
+        self.policy_seq_service.set_use_id(policy_id)

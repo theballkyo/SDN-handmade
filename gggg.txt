@@ -1,0 +1,46 @@
+conf t
+ip domain-name lab.local
+crypto key gen rsa modul 1024
+ip ssh ver 2
+
+
+{
+    "_id" : ObjectId("5a9780e753b81b02720044f1"),
+    "time" : 1519878375.76627,
+    "type" : "update",
+    "policy" : {
+        "actions" : {
+            "3232235786" : {
+                "data" : "192.168.1.13",
+                "management_ip" : "192.168.1.10",
+                "action" : "next-hop"
+            },
+            "3232236291" : {
+                "data" : "192.168.4.2",
+                "management_ip" : "192.168.3.3",
+                "action" : "next-hop"
+            },
+            "3232235777" : {
+                "data" : "192.168.3.1",
+                "management_ip" : "192.168.1.1",
+                "action" : "next-hop"
+            },
+            "3232236289" : {
+                "data" : "192.168.3.3",
+                "management_ip" : "192.168.3.1",
+                "action" : "next-hop"
+            },
+            "3232235782" : {
+                "data" : "192.168.1.10",
+                "management_ip" : "192.168.1.6",
+                "action" : "next-hop"
+            }
+        },
+        "src_ip" : "10.0.0.102",
+        "src_wildcard" : "0.0.0.0",
+        "src_port" : null,
+        "dst_ip" : "10.0.1.100",
+        "dst_wildcard" : "0.0.0.0",
+        "dst_port" : null
+    }
+}

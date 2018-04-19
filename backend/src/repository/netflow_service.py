@@ -203,6 +203,55 @@ class NetflowService(BaseService):
             {'$match': match_1}, {'$project': project_1}, {'$match': match_2}, {'$group': group}, {'$sort': sort}
         ])
 
+    def summary_flow_v2(self, from_ip, not_in=None):
+        match = {
+            'from_ip': from_ip
+        }
+        if not_in:
+            match['$or'] = [
+                {'ipv4_src_addr': {
+                    '$nin': not_in['src_ip']
+                }},
+                {'ipv4_dst_addr': {
+                    '$nin': not_in['dst_ip']
+                }}
+            ]
+
+        return self.netflow.aggregate([
+            {'$match': match},
+            {'$group': {
+                '_id': {  # Currently ignore port, proto
+                    # Todo support port, protocol
+                    "ipv4_src_addr": "$ipv4_src_addr",
+                    "ipv4_dst_addr": "$ipv4_dst_addr"
+                },
+                'in_bytes': {'$sum': '$in_bytes'},
+                'in_pkts': {'$sum': '$in_pkts'},
+                'in_bytes_per_sec': {'$sum': {
+                    '$cond': [
+                        {'$eq': [{'$subtract': ['$last_switched', '$first_switched']}, 0]},
+                        '$in_bytes',
+                        {'$divide': ['$in_bytes', {
+                            '$divide': [{'$subtract': ['$last_switched', '$first_switched']}, 1000]}]}
+                    ]
+                }},
+                'in_pkts_per_sec': {'$sum': {
+                    '$cond': [
+                        {'$eq': [{'$subtract': ['$last_switched', '$first_switched']}, 0]},
+                        '$in_pkts',
+                        {'$divide': ['$in_pkts', {
+                            '$divide': [{'$subtract': ['$last_switched', '$first_switched']}, 1000]}]}
+                    ]
+                }}
+                # 'count_src_port': {'$count': '$l4_src_port'}
+            }},
+            {
+                '$sort': {
+                    'in_bytes_per_sec': -1
+                }
+            }
+        ])
+
     def get_flows(self, sort_by='in_bytes', limit=1):
         return self.netflow.find().sort({sort_by: -1}).limit(limit)
 
@@ -216,12 +265,14 @@ class NetflowService(BaseService):
                 except KeyError:
                     pass
 
-            self.netflow.update_one({
-                # 'ipv4_src_addr': flow['ipv4_src_addr'],
-                # 'ipv4_dst_addr': flow['ipv4_dst_addr'],
-                # 'protocol': flow['protocol'],
-                # 'l4_src_port': flow['l4_src_port'],
-                # 'l4_dst_port': flow['l4_dst_port'],
+            self.netflow.update_one(
+                _flow,
+                # {
+                #     'ipv4_src_addr': flow['ipv4_src_addr'],
+                #     'ipv4_dst_addr': flow['ipv4_dst_addr'],
+                #     'protocol': flow['protocol'],
+                #     'l4_src_port': flow['l4_src_port'],
+                #     'l4_dst_port': flow['l4_dst_port'],
                 # 'src_mask': flow['src_mask'],
                 # 'dst_mask': flow['dst_mask'],
                 # 'input_snmp': flow['input_snmp'],
@@ -234,7 +285,13 @@ class NetflowService(BaseService):
                 # 'tcp_flags': flow['tcp_flags'],
                 # 'from_ip': flow['from_ip'],
                 # 'direction': flow['direction']
-                _flow
-            }, {
-                '$set': flow
-            }, upsert=True)
+                # }, {
+                {
+                    '$set': flow
+                }, upsert=True)
+
+    def is_flow_exist_by_ip(self, src_ip, dst_ip):
+        return self.netflow.find_one({
+            'ipv4_src_addr': src_ip,
+            'ipv4_dst_addr': dst_ip
+        })

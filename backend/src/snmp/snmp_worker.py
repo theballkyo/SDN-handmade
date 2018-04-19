@@ -84,15 +84,9 @@ class SNMPWorker:
         while not self.stop_signal:
             self.running = list(filter(lambda x: x.done() is False, self.running))
             active_device = device_service.get_by_snmp_can_run(self.loop_time)
-            # for device in active_device:
-            #     mp = multiprocessing.Process(target=self.run_loop, args=(device,))
-            #     mp.daemon = True
-            #     self.running.append(mp)
-            #     mp.start()
-            #     time.sleep(0.1)
 
             for device in active_device:
-                device_service = services.get_service('device')
+                # device_service = services.get_service('device')
                 management_ip = device['management_ip']
                 if device_service.snmp_is_running(management_ip):
                     return

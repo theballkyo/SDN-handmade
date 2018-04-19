@@ -118,6 +118,9 @@ class DeviceService(BaseService):
         if snmp_info.get('port') is None:
             raise ValueError()
 
+        device['snmp_is_running'] = False
+        device['snmp_last_run_time'] = 0
+
         self.device.update_one({
             'management_ip': device.get('management_ip'),
         }, {
@@ -139,7 +142,7 @@ class DeviceService(BaseService):
         """ Remove device """
         self.device.remove({'management_ip': management_ip})
 
-    def get_by_if_utilization(self, percent, side='in'):
+    def get_by_if_utilization(self, percent, side='in', cond='$gte'):
         if side == 'in':
             key_name = 'bw_in_usage_percent'
         elif side == 'out':
@@ -149,9 +152,18 @@ class DeviceService(BaseService):
 
         return self.device.find({
             'interfaces.' + key_name: {
-                '$gte': percent
+                cond: percent
             }
         }, {
+            'type': 1,
+            'snmp_info': 1,
             'management_ip': 1,
-            'interfaces.$': 1
+            'interfaces': 1
         })
+
+    def get_device_type(self, management_ip):
+        device = self.device.find_one({
+            'management_ip': management_ip
+        }, {'type': 1})
+
+        return device['type']

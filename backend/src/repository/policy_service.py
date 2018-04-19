@@ -6,6 +6,7 @@ import netaddr
 import sdn_utils
 from flow import FlowState
 from repository import BaseService
+import datetime
 
 
 # class PolicyAction:
@@ -126,7 +127,7 @@ class PolicyService(BaseService):
         self.policy_pending.insert_one({
             'type': 'update',
             'policy': policy,
-            'time': sdn_utils.datetime_now()
+            'created_at': sdn_utils.datetime_now()
         })
 
     def get_pending(self, limit=None, device_ip=None):
@@ -151,7 +152,7 @@ class PolicyService(BaseService):
             {
                 '$match': {
                     side: interface_ip,
-                    new_side: {'$ne': interface_ip}
+                    new_side: {'$ne': interface_ip}  # Switch to another route
                 }
             },
             {
@@ -160,7 +161,7 @@ class PolicyService(BaseService):
                         'interface_ip': "$" + side
                     },
                     'total': {
-                        '$sum': '$policy.info.total_in_bytes'
+                        '$sum': '$policy.info.in_bytes'
                     }
                 }
             },
@@ -171,21 +172,60 @@ class PolicyService(BaseService):
 
         return policy_list
 
+    def get_last_policy_apply(self, device_ip, time=15, **kwargs):
+        """
+
+        :param device_ip: Device IP Address
+        :param time: Time in seconds
+        :return:
+        """
+        return self.policy.find_one({
+            'info.submit_from.device_ip': device_ip,
+            'created_at': {'$lte': datetime.datetime.now() - datetime.timedelta(seconds=time)}
+        }, sort=[('created_at', -1)], **kwargs)
+
     def set_policy(self, policy):
         # Update time
-        policy['time'] = sdn_utils.datetime_now()
+        policy['created_at'] = sdn_utils.datetime_now()
         self.policy.replace_one({
             'policy_id': policy['policy_id']
         }, policy, upsert=True)
-        # else:
-        #     self.policy.replace_one({
-        #         'src_ip': policy['src_ip'],
-        #         'src_port': policy['src_port'],
-        #         'src_wildcard': policy['src_wildcard'],
-        #         'dst_ip': policy['dst_ip'],
-        #         'dst_port': policy['dst_port'],
-        #         'dst_wildcard': policy['dst_wildcard']
-        #     }, policy, upsert=True)
+
+    def get_policy_old_path_has_pass_interface(self, interface_ip, limit=1, side='in', device_ip=None):
+        db_filter = {
+            'info.old_path_link.in': interface_ip
+        }
+        if device_ip:
+            db_filter['info.submit_from.device_ip'] = device_ip
+        return self.policy.find(db_filter, limit=limit)
+
+    def get_policy_is_submit_from(self, device_ip):
+        return self.policy.find_one({
+            'info_submit_from.device_ip': device_ip
+        })
+
+    def get_all(self):
+        return self.policy.find()
+
+    def add_remove_policy_pending(self, policy):
+        """
+
+        :param policy: Policy ID or Policy info
+        :return:
+        """
+        if isinstance(policy, int):
+            policy = self.policy.find_one({'policy_id': policy})
+            if not policy:
+                return
+
+        self.policy_pending.insert_one({
+            'type': 'remove',
+            'policy': policy,
+            'created_at': sdn_utils.datetime_now()
+        })
 
     def remove_pending(self, _id):
         self.policy_pending.remove(_id)
+
+    def remove_policy(self, _id):
+        self.policy.remove(_id)

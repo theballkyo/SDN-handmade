@@ -1,5 +1,7 @@
 import logging
 import time
+import traceback
+
 from concurrent.futures import wait, ThreadPoolExecutor
 from multiprocessing import Manager
 from threading import Lock
@@ -53,6 +55,7 @@ class SSHConnection:
         for device, cmd in config_set.items():
             _device = self.devices.get(device)
             if not _device:
+                self.lock.release()
                 return False
         for _device, cmd in config_set.items():
             self.devices.get(_device)['work_q'].put({
@@ -76,17 +79,26 @@ class SSHWorker:
         self.ssh_connection = SSHConnection()
         self.manager = Manager()
         self.tasks = [task() for task in tasks]
+        self.initialTasks = []
+        self.pool = None
+        self.stop_control_q = Queue(maxsize=1)
 
     def stop(self):
         self.stop_signal = True
         logging.info("Waiting worker success task")
-        wait(self.set_worker)
-        logging.info("Stop SSHWorker success.")
+        self.stop_control_q.put('')
+        self.pool.shutdown()
 
-    def _control_worker_queue(self, results_q):
+    def _control_worker_queue(self, results_q, stop_control_q):
         logging.info("Control worker queue start")
         _running = {}
         while True:
+            try:
+                stop_control_q.get(timeout=0.01)
+                break
+            except Empty:
+                pass
+
             devices = self.device_service.get_all()
             for device in devices:
                 # If exists skip
@@ -138,21 +150,24 @@ class SSHWorker:
                 break
 
     def start(self):
-        pool = ThreadPoolExecutor(1)
+        self.pool = ThreadPoolExecutor(1)
         # Start control worker queue
-        pool.submit(self._control_worker_queue, self.results_q)
+        self.pool.submit(self._control_worker_queue, self.results_q, self.stop_control_q)
         time.sleep(10)
+        # Todo initial task
+
+        # -------------------
         while not self.stop_signal:
             self._update_worker_queue()
             try:
-                logging.info("Start task")
-                logging.info("Tasks: {}".format(self.tasks))
+                # logging.info("Start task")
+                # logging.info("Tasks: {}".format(self.tasks))
                 for task in self.tasks:
                     task.run(self.ssh_connection)
-                logging.info("End task")
-
-                time.sleep(1)
+                    time.sleep(0.1)
+                # logging.info("End task")
+                time.sleep(3)
             except KeyboardInterrupt:
                 break
             except Exception as e:
-                print(e)
+                logging.error(traceback.format_exc())

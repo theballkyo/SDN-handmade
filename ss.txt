@@ -54,7 +54,7 @@ cisco
 
 add device
 cisco_ios
-192.168.2.2
+192.168.2.3
 cisco
 cisco
 cisco
@@ -72,7 +72,7 @@ cisco
 
 add device
 cisco_ios
-192.168.3.2
+192.168.3.3
 cisco
 cisco
 cisco
@@ -88,3 +88,11 @@ cisco
 
 
 
+
+
+ip flow-cache timeout inactive 10
+ip flow-cache timeout active 1
+ip flow-export version 9
+ip flow-export template refresh-rate 1
+ip flow-export destination 10.0.0.100 23456
+ip flow-export source

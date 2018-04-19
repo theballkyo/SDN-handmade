@@ -32,6 +32,8 @@ class LinkService(BaseService):
                     }
                 }, upsert=True)
             )
+        if not ops:
+            return
         self.link.bulk_write(ops)
 
     def find_by_if_ip(self, ip1, ip2=None):

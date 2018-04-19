@@ -1,12 +1,14 @@
 from worker.ssh.ssh_worker import SSHWorker
 from task.monitor.policy_monitor_task import PolicyMonitorTask
+from task.monitor.clear_policy_task import ClearPolicyTask
+from task.monitor.clear_inactive_flow_task import ClearInactiveFlowTask
 from threading import Thread
 import logging
 import timeit
 
 
 def main():
-    ssh_worker = SSHWorker(PolicyMonitorTask)
+    ssh_worker = SSHWorker(ClearPolicyTask)
     t = Thread(target=ssh_worker.start, daemon=True)
     t.start()
     try:
