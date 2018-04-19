@@ -7,6 +7,7 @@ from multiprocessing import Queue
 from threading import Thread
 # import readline
 from datetime import datetime
+from time import time
 
 try:
     import readline
@@ -40,6 +41,7 @@ class LogBug:
         self.shutdown = False
         self.log_level = 0
         self.use_pprint = use_pprint
+        self.to_file = True
         # self.sys = sys
 
     def auto_run(self):
@@ -74,7 +76,10 @@ class LogBug:
         # self.listener_configurer()
         # import fcntl
         # import termios
+        if self.to_file:
+            f = open("logs/{}.txt".format(time()), "w")
         import sys
+        template = "[{created:%Y-%m-%d %H:%M:%S} {levelname}] [{processName}-{threadName}]: {message}\n"
         while True:
             try:
                 # time.sleep(1)
@@ -111,12 +116,14 @@ class LogBug:
                     data.update({'message': pprint.pformat(record.message, indent=8)})
 
                 sys.stdout.write(
-                    "[{created:%Y-%m-%d %H:%M:%S} {levelname}] [{processName}]: {message}\n".format(**data))
+                    template.format(**data))
                 # sys.stdout.write(record)
                 if self.is_wait_input:
                     sys.stdout.write(self.prompt + buff)
                 sys.stdout.flush()
                 # # logger.handle(record) # No level or filter logic applied - just do it!
+                if self.to_file:
+                    f.write(template.format(**data))
             except (KeyboardInterrupt, SystemExit):
                 raise
             except EOFError:
