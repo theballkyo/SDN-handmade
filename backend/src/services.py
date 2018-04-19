@@ -16,6 +16,9 @@ class AppService(Service):
 
     def is_running(self):
         app = self.db.app.find_one({}, {'is_running': 1})
+        if not app:
+            self.db.app.insert_one({'is_running': True})
+            return True
         return app['is_running']
 
     def set_running(self, running):
