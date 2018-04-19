@@ -80,7 +80,7 @@ class PathFinder:
         # Todo Check route from route-map
 
         routes = self.route_service.route.find({
-            # 'type': 4,
+            'type': 3,
             'device_ip': start_device_ip,
             'start_ip': {
                 '$lte': dst_ip.value  # Using IP integer format
@@ -96,6 +96,8 @@ class PathFinder:
             if start_device_ip != str(dst_ip):
                 final_path.append(str(dst_ip))
             path.add(tuple(final_path))
+            if len(prev_path) == 0:
+                return path
             return
         bbb = start_device_ip
         for route in routes:
@@ -210,6 +212,9 @@ class PathFinder:
             logging.error("select_by arg not in choices")
             return []
 
+        src_ip = self.get_management_ip(src_ip)
+        dst_ip = self.get_management_ip(dst_ip)
+
         all_paths = self.all_by_manage_ip(src_ip, dst_ip)
         paths = []
         last_bandwidth = None
@@ -233,8 +238,20 @@ class PathFinder:
                             out_if = link['dst']['interfaces'][0]
                             in_if = link['src']['interfaces'][0]
 
-                        out_available = out_if['speed'] - (out_if['bw_out_usage_percent'] / 100 * out_if['speed'])
-                        in_available = in_if['speed'] - (in_if['bw_in_usage_percent'] / 100 * in_if['speed'])
+                        l_src_if = link['src']['interfaces'][0]
+                        l_dsr_if = link['dst']['interfaces'][0]
+
+                        link_speed = min(l_src_if['speed'], l_dsr_if['speed'])
+                        out_usage = max(l_src_if['bw_out_usage_percent'], l_dsr_if['bw_in_usage_percent'])
+                        in_usage = max(l_src_if['bw_in_usage_percent'], l_dsr_if['bw_out_usage_percent'])
+
+                        out_available = link_speed - (out_usage / 100 * link_speed)
+                        in_available = link_speed - (in_usage / 100 * in_usage)
+
+                        bw_available = link_speed - ((out_usage + in_usage) / 100 * link_speed)
+
+                        # out_available = min(out_if['speed'], ou) - (out_if['bw_out_usage_percent'] / 100 * out_if['speed'])
+                        # in_available = in_if['speed'] - (in_if['bw_in_usage_percent'] / 100 * in_if['speed'])
                         # logging.debug("%.2f, %.2f, %.2f, %.2f, %.2f, %.2f",
                         #               out_if['bw_in_usage_percent'],
                         #               out_if['bw_out_usage_percent'],
@@ -242,7 +259,9 @@ class PathFinder:
                         #               in_if['bw_out_usage_percent'],
                         #               in_available,
                         #               out_available)
-                        this_path_bandwidth = min(in_available, out_available)
+                        # this_path_bandwidth = min(in_available, out_available)
+
+                        this_path_bandwidth = bw_available
 
                         if path_available_bandwidth is None:
                             path_available_bandwidth = this_path_bandwidth
@@ -339,6 +358,12 @@ class PathFinder:
                     _links.append(link)
 
         return _links
+
+    def get_management_ip(self, ip):
+        device = self.device_service.find_by_if_ip(ip)
+        if device is None:
+            return None
+        return device['management_ip']
 
     def simulate_route(self, include_pending=False):
         """
