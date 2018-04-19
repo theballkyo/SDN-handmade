@@ -141,8 +141,8 @@ def create_networkx_graph(devices, add_link=True):
 
         else:
             # TODO
-            raise NotImplementedError("SNMP currently is not support")
-
+            # raise NotImplementedError("SNMP currently is not support")
+            return networkx
     if add_link:
         link_service.add_links(link_list)
 
