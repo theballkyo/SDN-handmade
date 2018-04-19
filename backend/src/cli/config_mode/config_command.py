@@ -3,6 +3,7 @@ import logging
 import ipaddress
 import sdn_utils
 import services
+from repository import get_service
 # from services.device_service import DeviceService
 from sdn_handmade import Device
 
@@ -117,7 +118,7 @@ class AddDeviceCommand():
 
             # device = self.topology.create_device_object(device_info, ssh_info, snmp_info)
             # self.topology.add_device(device)
-            device_service = services.DeviceService()
+            device_service = get_service('device')
             device_service.add_device({
                 'management_ip': device_info['ip'],
                 'status': Device.STATUS_OFFLINE,
