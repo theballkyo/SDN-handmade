@@ -60,7 +60,7 @@ class DataFlowSet:
 
                 if field.field_type in (21, 22):
                     fdata = int(fdata)
-                    logging.info("%s:%s:%s", header.timestamp, header.uptime, fdata)
+                    # logging.info("%s:%s:%s", header.timestamp, header.uptime, fdata)
                     fdata = (header.timestamp - (header.uptime / 1000)) + (fdata / 1000)
                     # Convert to second
                     # fdata /= 1000
