@@ -11,8 +11,14 @@ import sdn_utils
 import services
 from database import get_mongodb
 from device import Device
-from netflow import NetflowWorker
+# from netflow import NetflowWorker
+from worker.netflow.netflow_worker import NetflowWorker
 from snmp.snmp_worker import SNMPWorker
+from worker.ssh.ssh_worker import SSHWorker
+from task.monitor.clear_policy_task import ClearPolicyTask
+from task.monitor.clear_inactive_flow_task import ClearInactiveFlowTask
+from task.monitor.policy_monitor_task import PolicyMonitorTask
+from task.monitor.traffic_monitor_task import TrafficMonitorTask
 
 
 class Router(Device):
@@ -157,6 +163,14 @@ class Topology:
             netflow_port
         )
 
+        self._ssh_worker = SSHWorker(
+            ClearInactiveFlowTask,
+            ClearPolicyTask,
+            TrafficMonitorTask,
+            PolicyMonitorTask
+        )
+        self._ssh_worker_t = None
+
         self.mongo = get_mongodb()
 
         self.init()
@@ -179,15 +193,19 @@ class Topology:
     def run(self):
         """ Start topology loop
         """
-        if not self.app_service.is_running():
-            # Resetting SNMP status
-            devices = self.device_service.get_all()
-            for device in devices:
-                self.device_service.set_snmp_running(device['management_ip'], False)
+        # if not self.app_service.is_running():
 
-            self._netflow_worker.start()
-            threading.Thread(target=self._snmp_worker.run).start()
-            self.app_service.set_running(True)
+        # Resetting SNMP status
+        devices = self.device_service.get_all()
+        for device in devices:
+            self.device_service.set_snmp_running(device['management_ip'], False)
+
+        self._netflow_worker.start()
+        threading.Thread(target=self._snmp_worker.run).start()
+        self._ssh_worker_t = threading.Thread(target=self._ssh_worker.start)
+        self._ssh_worker_t.name = "SSH-WORKER"
+        self._ssh_worker_t.start()
+        self.app_service.set_running(True)
 
     def shutdown(self):
         """ Shutdown topology
@@ -198,6 +216,9 @@ class Topology:
 
         self._netflow_worker.shutdown()
         self._netflow_worker.join()
+        self._ssh_worker.stop()
+
+        logging.info("Stop SSHWorker success.")
 
     def get_device_by_ip(self, ip):
         """ Get device object by IP address
