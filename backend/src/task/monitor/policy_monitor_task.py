@@ -4,6 +4,8 @@ from time import time
 from repository import get_service
 from router_command.policy_command import generate_action_command, generate_policy_command
 import logging
+
+from task.snmp_fetch import SNMPFetch
 from worker.ssh.ssh_worker import SSHConnection
 from typing import Dict
 
@@ -92,7 +94,7 @@ class PolicyMonitorTask:
             policy_id = current_policy['policy_id']
             policy_name = current_policy['name']
             diff_policy = self.diff(current_policy, new_policy['policy'])
-            pprint.pprint(diff_policy)
+            logging.info(pprint.pformat(diff_policy))
             actions = diff_policy['actions']
             policy = diff_policy['policy']
         else:  # 3.2 New policy
@@ -109,22 +111,23 @@ class PolicyMonitorTask:
         new_policy['policy']['policy_id'] = policy_id
 
         # Step 4 update policy
-        policy_cmd = None
-        if policy != 'not_changed':
-            policy_cmd = generate_policy_command('cisco_ios', policy)
-            pprint.pprint(policy_cmd)
+        # policy_cmd = None
+        # if policy != 'not_changed':
+        policy_cmd = generate_policy_command('cisco_ios', policy)
         device_list = {}
         for node_id, action in actions.items():
-            print("Node ID: {}".format(action['management_ip']))
-            cmd = generate_action_command('cisco_ios', policy_id, policy_name, action)
-            pprint.pprint(cmd)
-            if policy_cmd:
-                cmd += policy_cmd
-            device_list[action['management_ip']] = ["\n".join(cmd)]
+            logging.info(pprint.pformat("Node ID: {}".format(action['management_ip'])))
+            action_cmd = generate_action_command('cisco_ios', policy_id, policy_name, action)  # Aka. route-map
+            # logging.info(pprint.pformat(cmd))
+            # if policy_cmd:
+            #     cmd += policy_cmd
+
+            # Policy cmd + action cmd
+            device_list[action['management_ip']] = ["\n".join(policy_cmd + action_cmd)]
             # device_list[action['management_ip']] = cmd
 
-        pprint.pprint(new_policy['policy'])
-
+        logging.info(pprint.pformat(new_policy['policy']))
+        logging.info(pprint.pformat(device_list))
         # Step 5 SSH to device(s)
         connect = ssh_connection.check_connection(device_list.keys())
         # pprint.pprint(connect)
@@ -139,3 +142,7 @@ class PolicyMonitorTask:
         self.policy_service.remove_pending(new_policy['_id'])
         # Set policy seq to in_use is True
         self.policy_seq_service.set_use_id(policy_id)
+
+        # Force update SNMP interfaces
+        snmp_fetch = SNMPFetch()
+        snmp_fetch.run(ssh_connection)
