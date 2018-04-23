@@ -5,7 +5,7 @@ import time
 import sdn_utils
 from repository import get_service, PolicyRoute
 from tools import PathFinder
-from snmp.snmp_force_process import force_update_interface
+
 
 class TrafficMonitorTask:
     def __init__(self):
@@ -161,7 +161,8 @@ class TrafficMonitorTask:
                     self.reverse_path = []
                     self.reverse_path_link = []
                     self.explorer_neighbor = []
-                    logging.debug("Find available path for flow: {} <=> {} || {}".format(src_flow, dst_flow, src_node_ip))
+                    logging.debug(
+                        "Find available path for flow: {} <=> {} || {}".format(src_flow, dst_flow, src_node_ip))
                     new_path = self.find_available_path(src_node_ip, flow_dst_node_ips, initial=True)
 
                     # If not have a new path
@@ -267,7 +268,8 @@ class TrafficMonitorTask:
                                 continue
                             # Case 2
                             else:
-                                logging.debug("Found path: %s", path['path'])
+                                logging.debug("Found path: %s, Available bw %s", path['path'],
+                                              path['available_bandwidth'])
                                 return path
         else:
             self.reverse_path.append(src_node_ip)
