@@ -12,6 +12,7 @@ import services
 from database import get_mongodb
 from device import Device
 # from netflow import NetflowWorker
+from task.snmp_fetch import SNMPFetch
 from worker.netflow.netflow_worker import NetflowWorker
 from snmp.snmp_worker import SNMPWorker
 from worker.ssh.ssh_worker import SSHWorker
@@ -156,7 +157,7 @@ class Topology:
         self.subnets = []
         self.app_service = services.AppService()
 
-        self._snmp_worker = SNMPWorker()
+        # self._snmp_worker = SNMPWorker()
 
         self._netflow_worker = NetflowWorker(
             netflow_ip,
@@ -164,6 +165,7 @@ class Topology:
         )
 
         self._ssh_worker = SSHWorker(
+            SNMPFetch,
             ClearInactiveFlowTask,
             ClearPolicyTask,
             TrafficMonitorTask,
@@ -201,7 +203,7 @@ class Topology:
             self.device_service.set_snmp_running(device['management_ip'], False)
 
         self._netflow_worker.start()
-        threading.Thread(target=self._snmp_worker.run).start()
+        # threading.Thread(target=self._snmp_worker.run).start()
         self._ssh_worker_t = threading.Thread(target=self._ssh_worker.start)
         self._ssh_worker_t.name = "SSH-WORKER"
         self._ssh_worker_t.start()
@@ -212,7 +214,7 @@ class Topology:
         """
         self.app_service.set_running(False)
 
-        self._snmp_worker.shutdown()
+        # self._snmp_worker.shutdown()
 
         self._netflow_worker.shutdown()
         self._netflow_worker.join()
