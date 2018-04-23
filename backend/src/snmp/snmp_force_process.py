@@ -1,7 +1,4 @@
 import asyncio
-import logging
-import time
-import sdn_utils
 
 try:
     import uvloop
