@@ -216,12 +216,7 @@ class TrafficMonitorTask:
                     policy = policy_route.get_policy()
                     self.policy_service.add_new_pending_policy(policy)
 
-                    # Force update SNMP interfaces
-                    force_update_interface(device['management_ip'],
-                                           device['snmp_info']['community'],
-                                           device['snmp_info']['port']
-                                           )
-                    break
+                    return
 
         self.last_run = time.time()
         logging.debug("Traffic monitor task is run success...")
