@@ -1,3 +1,5 @@
+import logging
+
 from task.task import Task
 from snmp.snmp_worker import SNMPWorker
 from repository import get_service
@@ -14,8 +16,10 @@ class SNMPFetch(Task):
         self.executor = ProcessPoolExecutor(num_worker)
         self.running_device = []
 
-    def run(self):
+    def run(self, ssh_connection):
+        logging.info("SNMP fetch start")
         devices = self.device_service.get_all()
         for device in devices:
             self.running_device.append(self.executor.submit(SNMPWorker.run_loop, device))
         wait(self.running_device)
+        logging.info("SNMP fetch end")
