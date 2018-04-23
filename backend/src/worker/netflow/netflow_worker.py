@@ -42,7 +42,7 @@ class NetflowWorker(threading.Thread):
                 if data == b'stop':
                     continue
 
-                logging.info("Received data from {}, length {}".format(sender, len(data)))
+                # logging.info("Received data from {}, length {}".format(sender, len(data)))
 
                 export = ExportPacket(data, _templates)
 
@@ -70,7 +70,7 @@ class NetflowWorker(threading.Thread):
                     # Remove flows are not active
                     # TODO
 
-                logging.info("Flow: {}, {}".format(len(export.flows), len(flows)))
+                # logging.info("Flow: {}, {}".format(len(export.flows), len(flows)))
 
                 self.netflow_service.update_flows(flows)
 
