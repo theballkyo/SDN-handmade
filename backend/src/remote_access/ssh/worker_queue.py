@@ -23,7 +23,7 @@ class SSHQueueWorker(threading.Thread):
             self._max_retry_timeout = 3
         self._lock = threading.Lock()
 
-        self.setName(ssh_info['ip'])
+        self.setName('SSH-Q-WORKER' + ssh_info['ip'])
 
     def run(self):
         self.new_worker_queue()
@@ -68,7 +68,7 @@ class SSHQueueWorker(threading.Thread):
                 break
 
             while True:
-                logging.info("Name: %s run looping", self.getName())
+                # logging.info("Name: %s run looping", self.getName())
                 if not reconnect:
                     try:
                         work = self._work_queue.get(timeout=30)
