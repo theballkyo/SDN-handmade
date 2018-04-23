@@ -240,7 +240,7 @@ class TrafficMonitorTask:
                     src_node_ip,
                     dst_node_ip,
                     PathFinder.SelectBy.HIGHEST,
-                    self.current_flow['in_bytes_per_sec']  # Minimum free bandwidth
+                    self.current_flow['in_bytes_per_sec'] * 8  # Minimum free bandwidth
                 )
                 for path in paths:
                     # Source is R3
