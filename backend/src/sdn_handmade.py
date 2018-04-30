@@ -190,7 +190,7 @@ class Topology:
         try:
             self.mongo.flow_seq.bulk_write(op)
         except Exception as e:
-            print(e)
+            logging.error(e)
 
     def run(self):
         """ Start topology loop
