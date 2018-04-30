@@ -160,6 +160,7 @@ class DeviceService(BaseService):
             'management_ip': 1,
             'interfaces': 1
         })
+        # Todo sort
 
     def get_device_type(self, management_ip):
         device = self.device.find_one({
