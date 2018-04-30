@@ -4,13 +4,21 @@ import pymongo
 import os
 import settings
 
-DEFAULT_CONNECTION_NAME = 'default'
+DEFAULT_CONNECTION_NAME = None
+
+
+def set_connection_name(name):
+    global DEFAULT_CONNECTION_NAME
+    DEFAULT_CONNECTION_NAME = name
+
 
 _connections = {}
 
 
-def get_mongodb(alias=DEFAULT_CONNECTION_NAME):
+def get_mongodb(alias=None):
     global _connections
+    if not alias:
+        alias = DEFAULT_CONNECTION_NAME
     alias_original = alias
     alias = alias + str(os.getpid())
     if _connections.get(alias) is None:

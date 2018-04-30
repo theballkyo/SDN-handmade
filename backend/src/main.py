@@ -1,4 +1,6 @@
 """ SDN Handmade for legacy Cisco device """
+import argparse
+import database
 import matplotlib
 import os
 import logging
@@ -23,10 +25,9 @@ def main():
     )
 
     # Start topology loop
-    topology.run()
+    # topology.run()
 
     # Start REST API Server
-    # Todo change from thread to multiprocessing
     rest_server = RestServer()
     rest_server.run()
 
@@ -53,4 +54,11 @@ if __name__ == '__main__':
 
     if os.name == 'nt':
         print("Warning: Windows is not fully support.")
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--db',
+                        default='default',
+                        help='Database name (default is default)')
+    args = parser.parse_args()
+    print(args.db)
+    database.set_connection_name(args.db)
     main()
