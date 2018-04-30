@@ -4,5 +4,6 @@ src/\.idea/
 backend/src/.idea/
 backend/src/config.py
 backend/src/settings.py
+backend/src/logs/**
 **/.vscode/**
 .idea
