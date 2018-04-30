@@ -40,9 +40,11 @@ class TrafficMonitorTask:
         logging.debug("Traffic monitor task is running...")
         # Update path
         self.path_finder.update_graph()
+        # self.path_finder.save_graph_img()
 
         datetime_now = datetime.datetime.now()
 
+        # Step 1 Find link is high utilization
         devices = self.device_service.get_by_if_utilization(self.utilize, 'in')
 
         for device in devices:
@@ -55,16 +57,16 @@ class TrafficMonitorTask:
                 src_node_ip = device['management_ip']
 
                 # Todo checking policy pending
-                pending_policy_set = self.policy_service.sum_bytes_pending_has_pass_interface(src_if_ip)
-                pending_policy_set = list(pending_policy_set)
-                if pending_policy_set:
-                    logging.debug("Found Pending policy: %s", pending_policy_set)
-                    if pending_policy_set:
-                        total = pending_policy_set[0]
-                        new_utilize = interface['bw_in_usage_persec'] - total['total']
-                        new_utilize_percent = sdn_utils.fraction_to_percent(new_utilize, interface['speed'])
-                        if new_utilize_percent < self.utilize:
-                            continue
+                # pending_policy_set = self.policy_service.sum_bytes_pending_has_pass_interface(src_if_ip)
+                # pending_policy_set = list(pending_policy_set)
+                # if pending_policy_set:
+                #     logging.debug("Found Pending policy: %s", pending_policy_set)
+                #     # if pending_policy_set:
+                #     total = pending_policy_set[0]
+                #     new_utilize = interface['bw_in_usage_persec'] - total['total']
+                #     new_utilize_percent = sdn_utils.fraction_to_percent(new_utilize, interface['speed'])
+                #     if new_utilize_percent < self.utilize:
+                #         continue
 
                 # Not used this
                 # Get last update flow time
