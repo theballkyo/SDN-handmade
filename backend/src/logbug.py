@@ -1,4 +1,5 @@
 # import pprint
+import errno
 import logging
 import logging.handlers
 import struct
@@ -8,6 +9,7 @@ from threading import Thread
 # import readline
 from datetime import datetime
 from time import time
+import os
 
 try:
     import readline
@@ -77,7 +79,14 @@ class LogBug:
         # import fcntl
         # import termios
         if self.to_file:
-            f = open("logs/{}.txt".format(time()), "w")
+            filename = "logs/{}.txt".format(time())
+            if not os.path.exists(os.path.dirname(filename)):
+                try:
+                    os.makedirs(os.path.dirname(filename))
+                except OSError as exc:  # Guard against race condition
+                    if exc.errno != errno.EEXIST:
+                        raise
+            f = open(filename, "w")
         import sys
         template = "[{created:%Y-%m-%d %H:%M:%S} {levelname}] [{processName}-{threadName}]: {message}\n"
         while True:
