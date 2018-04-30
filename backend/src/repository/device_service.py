@@ -159,8 +159,7 @@ class DeviceService(BaseService):
             'snmp_info': 1,
             'management_ip': 1,
             'interfaces': 1
-        })
-        # Todo sort
+        }).sort({cond: -1})
 
     def get_device_type(self, management_ip):
         device = self.device.find_one({
