@@ -51,7 +51,7 @@ class PathFinder:
             self.graph = generate_graph.create_networkx_graph(devices)
             self._all_simple_paths = {}
             self.link_cache = {}
-        except ValueError as e:
+        except (ValueError, KeyError) as e:
             # Create empty graph
             print(e)
             self.graph = nx.Graph()
