@@ -1,6 +1,5 @@
 <template>
   <div ref="visualization" :style="{
-    width: width + 'px', 
     height:height + 'px',
     border: '1px solid lightgray'}"></div>
 </template>
@@ -20,57 +19,67 @@ const events = [
 export default {
   data() {
     return {
-      width: 400,
-      height: 400
+      // width: 400,
+      height: 600,
+      graphData: null
     };
+  },
+  props: {
+    nodes: {
+      require: true
+    },
+    edges: {
+      require: true
+    },
+    physics: {
+      default: true
+    }
+  },
+  watch: {
+    nodes(n, o) {
+      // Todo Remove nodes is not exist !
+      this.graphData.nodes.update(n);
+      // this.graph2d.stabilize();
+      // this.graphData.nodes.clear();
+      // this.graphData.nodes.add(n);
+    },
+    edges(n, o) {
+      this.graphData.edges.update(n);
+      // this.graphData.edges.clear();
+      // this.graphData.edges.add(n);
+      // this.graph2d.stabilize();
+    }
   },
   mounted() {
     const container = this.$refs.visualization;
-    const nodes = [
-      { id: 1, value: 2, label: "Algie" },
-      { id: 2, value: 31, label: "Alston" },
-      { id: 3, value: 12, label: "Barney" },
-      { id: 4, value: 16, label: "Coley" },
-      { id: 5, value: 17, label: "Grant" },
-      { id: 6, value: 15, label: "Langdon" },
-      { id: 7, value: 6, label: "Lee" },
-      { id: 8, value: 5, label: "Merlin" },
-      { id: 9, value: 30, label: "Mick" },
-      { id: 10, value: 18, label: "Tod" }
-    ];
 
-    // create connections between people
-    // value corresponds with the amount of contact between two people
-    const edges = [
-      { from: 2, to: 8, value: 3, title: "3 emails per week" },
-      { from: 2, to: 9, value: 5, title: "5 emails per week" },
-      { from: 2, to: 10, value: 1, title: "1 emails per week" },
-      { from: 4, to: 6, value: 8, title: "8 emails per week" },
-      { from: 5, to: 7, value: 2, title: "2 emails per week" },
-      { from: 4, to: 5, value: 1, title: "1 emails per week" },
-      { from: 9, to: 10, value: 2, title: "2 emails per week" },
-      { from: 2, to: 3, value: 6, title: "6 emails per week" },
-      { from: 3, to: 9, value: 4, title: "4 emails per week" },
-      { from: 5, to: 3, value: 1, title: "1 emails per week" },
-      { from: 2, to: 7, value: 4, title: "4 emails per week" }
-    ];
-
-    const data = {
-      nodes: nodes,
-      edges: edges
+    this.graphData = {
+      nodes: new vis.DataSet(this.nodes),
+      edges: new vis.DataSet(this.edges)
     };
     const options = {
+      physics: true,
       nodes: {
         shape: "dot",
-        scaling: {
-          label: {
-            min: 8,
-            max: 20
-          }
-        }
+        // scaling: {
+        //   customScalingFunction: function(min, max, total, value) {
+        //     return value / total;
+        //   },
+        //   min: 5,
+        //   max: 150
+        // }
+        // scaling: {
+        //   label: {
+        //     min: 8,
+        //     max: 20
+        //   }
+        // }
       }
     };
-    this.graph2d = new vis.Network(container, data, options);
+    this.graph2d = new vis.Network(container, this.graphData, options);
+    events.forEach(eventName => {
+      this.graph2d.on(eventName, props => this.$emit(eventName, props));
+    });
   }
 };
 </script>

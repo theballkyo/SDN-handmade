@@ -1,6 +1,6 @@
 import logging
 
-from repository import get_service
+from repository import get_service, PolicyRoute
 import sdn_utils
 from worker.ssh.ssh_worker import SSHConnection
 from router_command.policy_command import generate_remove_command
@@ -10,9 +10,9 @@ class ClearPolicyTask:
     def __init__(self):
         self.low_utilize = 60
         self.normal_utilize = 70
-        self.high_utilize = 80
+        self.high_utilize = 85
         self.device_service = get_service('device')
-        self.policy_service = get_service('policy')
+        self.flow_routing_repo = get_service('policy')
         self.policy_seq_service = get_service('policy_seq')
         self.netflow_service = get_service('netflow')
 
@@ -22,8 +22,11 @@ class ClearPolicyTask:
         :param ssh_connection:
         :return:
         """
-        active_policy = self.policy_service.get_all()
+        active_policy = self.flow_routing_repo.get_by_submit_from_type(PolicyRoute.TYPE_AUTOMATE)
         for policy in active_policy:
+            # Todo Reflect in policy get
+            # if policy['info']['submit_from']['type'] == 1:
+            #     continue
             flow = self.netflow_service.is_flow_exist_by_ip(policy['src_ip'], policy['dst_ip'])
 
             if not flow:
@@ -39,8 +42,8 @@ class ClearPolicyTask:
 
                 ssh_connection.send_config_set(device_list)
                 # Remove policy
-                self.policy_service.remove_policy(policy['_id'])
-                self.policy_seq_service.set_not_use_id(policy['policy_id'])
+                self.flow_routing_repo.remove_policy(policy['_id'])
+                self.policy_seq_service.set_not_use_id(policy['flow_id'])
 
     def run(self, ssh_connection: SSHConnection):
         """
@@ -65,10 +68,12 @@ class ClearPolicyTask:
                 if interface.get('bw_in_usage_percent') > self.low_utilize:
                     continue
 
-                policy = self.policy_service.get_policy_old_path_has_pass_interface(
+                policy = self.flow_routing_repo.get_policy_old_path_has_pass_interface(
                     interface['ipv4_address'],
-                    device_ip=device['management_ip']
+                    device_ip=device['management_ip'],
+                    submit_from_type=PolicyRoute.TYPE_AUTOMATE
                 )
+
                 if policy.count() == 0:
                     continue
                 policy = policy[0]
@@ -94,7 +99,7 @@ class ClearPolicyTask:
 
                 ssh_connection.send_config_set(device_list)
                 # Remove policy
-                self.policy_service.remove_policy(policy['_id'])
-                self.policy_seq_service.set_not_use_id(policy['policy_id'])
+                self.flow_routing_repo.remove_policy(policy['_id'])
+                self.policy_seq_service.set_not_use_id(policy['flow_id'])
 
         return True

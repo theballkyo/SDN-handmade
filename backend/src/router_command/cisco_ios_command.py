@@ -2,7 +2,15 @@ import logging
 
 import netaddr
 
+from repository import PolicyRoute
+
 ACCEPT_PROTOCOL = ('tcp', 'udp')
+
+
+def generate_cmd(flow, flow_id, flow_name, action):
+    policy = generate_policy_command(flow)
+    action = generate_action_command(flow_id, flow_name, action)
+    return policy + action
 
 
 def _generate_match(ip, wildcard, port):
@@ -21,12 +29,14 @@ def _generate_match(ip, wildcard, port):
     else:
         acl_cmd = '{} {}'.format(str(src_ip), str(src_wildcard))
 
-    if port:
-        if port.find("-"):
+    if isinstance(port, str):
+        if port == 'any':
+            acl_cmd += ""
+        elif port.find("-") >= 0:
             start_port, end_port = port.split('-')
             acl_cmd += " range {} {}".format(start_port, end_port)
-        else:
-            acl_cmd += " eq {}".format(port)
+    elif isinstance(port, int):
+        acl_cmd += " eq {}".format(str(port))
 
     return acl_cmd
 
@@ -37,7 +47,7 @@ def generate_acl_name(policy_id):
 
 def generate_policy_command(policy):
     name = policy.get('name')
-    policy_id = policy.get('policy_id')
+    policy_id = policy.get('flow_id')
 
     acl_name = "ip access-list extended {}".format(generate_acl_name(policy_id))
     clear_acl = "no {}".format(acl_name)
@@ -134,11 +144,11 @@ def generate_action_command(policy_id, policy_name, action):
     #         route_map03 = 'no set interface {}'.format(current_action['data'])
 
     # Set route-map action
-    if action['action'] == 'drop':
+    if action['action'] == PolicyRoute.ACTION_DROP:
         route_map04 = 'set interface Null0'
-    elif action['action'] == 'next-hop':
+    elif action['action'] == PolicyRoute.ACTION_NEXT_HOP_IP:
         route_map04 = 'set ip next-hop {}'.format(action['data'])
-    elif action['action'] == 'exit-if':
+    elif action['action'] == PolicyRoute.ACTION_EXIT_IF:
         route_map04 = 'set interface {}'.format(action['data'])
     else:
         route_map04 = ''
@@ -147,7 +157,7 @@ def generate_action_command(policy_id, policy_name, action):
 
 
 def generate_remove_command(policy):
-    policy_id = policy['policy_id']
+    policy_id = policy['flow_id']
 
     acl = "no ip access-list extended {}".format(generate_acl_name(policy_id))
     route_map = "no route-map SDN-handmade permit {}".format(policy_id)

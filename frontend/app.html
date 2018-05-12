@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html {{ HTML_ATTRS }}>
+  <head>
+        <script src="/assets/js/require.min.js"></script>
+        <script>
+          requirejs.config({
+              baseUrl: '/'
+          });
+        </script>
+        <!-- Dashboard Core -->
+        <script src="/assets/js/dashboard.js"></script>
+        <!-- <script src="/assets/js/vendors/jquery-3.2.1.min.js"></script> -->
+        <link id="vendor" rel="stylesheet" href="/assets/css/dashboard.css">
+    {{ HEAD }}
+  </head>
+  <body {{ BODY_ATTRS }}>
+    {{ APP }}
+  </body>
+</html>

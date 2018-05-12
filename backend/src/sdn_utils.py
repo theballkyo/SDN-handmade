@@ -1,4 +1,5 @@
 import datetime
+import logging
 import socket
 import struct
 import settings
@@ -56,7 +57,7 @@ def fraction_to_percent(numerator, denominator):
 def cal_bw_usage_percent(octets, if_speed, in_time):
     """ Calculate bandwidth usage
     """
-    # logging.debug("%s <--> %s :: %s", octets, if_speed, in_time)
+    # logging.info("%s <--> %s :: %s", octets, if_speed, in_time)
     # return ((if_speed / ((octets * 8) / (in_time / 100))) * 100)
     in_time = in_time
     return ((octets * 8 * 100) / (in_time * if_speed)) * 100

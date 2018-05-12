@@ -8,6 +8,7 @@ import networkx as nx
 import generate_graph
 import repository
 import sdn_utils
+import traceback
 
 from enum import Enum, unique
 
@@ -53,7 +54,7 @@ class PathFinder:
             self.link_cache = {}
         except (ValueError, KeyError) as e:
             # Create empty graph
-            print(e)
+            logging.error(traceback.format_exc())
             self.graph = nx.Graph()
 
     def active_by_subnet(self, src_subnet, dst_subnet):

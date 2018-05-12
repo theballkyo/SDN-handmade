@@ -11,7 +11,8 @@ def create_networkx_graph(devices, add_link=True):
     """ Create graph than using NetworkX library
     """
     networkx = nx.Graph()
-
+    # networkx = nx.MultiGraph()
+    # networkx.add
     cdp_service = repository.get_service('cdp')
     device_service = repository.get_service('device')
     link_service = repository.get_service('link')
@@ -103,23 +104,35 @@ def create_networkx_graph(devices, add_link=True):
 
                 if netaddr.IPAddress(src_device['management_ip']) < netaddr.IPAddress(neighbor_device['management_ip']):
                     src_node_ip = src_device['management_ip']
+                    src_node_id = src_device['_id']
+                    src_node_hostname = src_device['name']  # Todo change name to hostname
                     dst_node_ip = neighbor_device['management_ip']
+                    dst_node_id = neighbor_device['_id']
+                    dst_node_hostname = neighbor_device['name']  # Todo change name to hostname
                 else:
+                    dst_node_hostname = src_device['name']  # Todo change name to hostname
                     dst_node_ip = src_device['management_ip']
+                    dst_node_id = src_device['_id']
                     src_node_ip = neighbor_device['management_ip']
+                    src_node_id = neighbor_device['_id']
+                    src_node_hostname = neighbor_device['name']  # Todo change name to hostname
 
                 link_info = {
+                    'src_node_id': src_node_id,
                     'src_node_ip': src_node_ip,
                     'src_ip': src_if_ip,
                     'src_if_ip': src_if_ip,
+                    'src_node_hostname': src_node_hostname,
                     'src_port': src_port,
                     'src_if_index': src_if_index,
                     'src_in_use': src_in_use,
                     'src_out_use': src_out_use,
                     # 'src_usage': src_usage,
+                    'dst_node_id': dst_node_id,
                     'dst_node_ip': dst_node_ip,
                     'dst_ip': dst_if_ip,
                     'dst_if_ip': dst_if_ip,
+                    'dst_node_hostname': dst_node_hostname,
                     'dst_port': dst_port,
                     'dst_if_index': dst_if_index,
                     'dst_in_use': neighbor_in_use,
@@ -135,6 +148,8 @@ def create_networkx_graph(devices, add_link=True):
                     neighbor_device['management_ip'],
                     links=links
                 )
+
+                # logging.info(networkx.edges)
 
                 if add_link:
                     link_list.append(link_info)

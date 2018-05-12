@@ -2,6 +2,7 @@ import logging
 from typing import Optional, Dict
 
 import netaddr
+from bson import ObjectId
 
 import sdn_utils
 from flow import FlowState
@@ -9,12 +10,20 @@ from repository import BaseService
 import datetime
 
 
-# class PolicyAction:
-#     def __init__(self, actions: Dict):
-#         self.actions = actions.copy()
-
-
 class PolicyRoute:
+    TYPE_STATIC = 1
+    TYPE_AUTOMATE = 2
+
+    STATUS_WAIT_APPLY = 0
+    STATUS_WAIT_UPDATE = 1
+    STATUS_WAIT_REMOVE = 2
+
+    STATUS_ACTIVE = 3
+
+    ACTION_DROP = 1
+    ACTION_NEXT_HOP_IP = 2
+    ACTION_EXIT_IF = 3
+
     FIELDS = ('src_ip',
               'src_wildcard',
               'src_port',
@@ -29,7 +38,10 @@ class PolicyRoute:
     def __init__(self, policy=None, **kwargs):
         # TODO Support port
         self.src_network = None
+        self.src_port = 'any'
         self.dst_network = None
+        self.dst_port = 'any'
+        self.name = None
 
         for field in self.FIELDS:
             setattr(self, field, None)
@@ -43,12 +55,15 @@ class PolicyRoute:
             if policy.get('actions'):
                 self.actions = policy['actions'].copy()
             else:
-                self.actions = {}
+                self.actions = []
         else:
             self.policy = {}
-            self.actions = {}
+            self.actions = []
 
         self.info = {}
+
+    def set_name(self, name):
+        self.name = name
 
     def set_policy(self, **kwargs):
         if kwargs.get('src_network'):
@@ -57,6 +72,12 @@ class PolicyRoute:
         if kwargs.get('dst_network'):
             self.dst_network = netaddr.IPNetwork(kwargs.get('dst_network'))
 
+        if kwargs.get('src_port'):
+            self.src_port = int(kwargs.get('src_port'))
+
+        if kwargs.get('dst_port'):
+            self.dst_port = int(kwargs.get('dst_port'))
+
     def set_action(self, action: Dict[str, Optional[str]]):
         raise NotImplementedError()
 
@@ -64,11 +85,11 @@ class PolicyRoute:
         raise NotImplementedError()
 
     def add_action(self, node, action, data=None):
-        self.actions[str(netaddr.IPAddress(node).value)] = {
+        self.actions.append({
             'management_ip': node,
             'action': action,
             'data': data
-        }
+        })
 
     def remove_action(self, node):
         self.actions = filter(lambda _node: _node != node, self.actions)
@@ -85,22 +106,34 @@ class PolicyRoute:
 
     def get_policy(self):
         return {
-            'src_ip': str(self.src_network.ip),
-            'src_port': None,
-            'src_wildcard': str(self.src_network.hostmask),
-            'dst_ip': str(self.dst_network.ip),
-            'dst_port': None,
-            'dst_wildcard': str(self.dst_network.hostmask),
-            'actions': self.actions.copy(),
+            'name': self.name,
+            'new_flow': {
+                'src_ip': str(self.src_network.ip),
+                'src_port': self.src_port,
+                'src_wildcard': str(self.src_network.hostmask),
+                'dst_ip': str(self.dst_network.ip),
+                'dst_port': self.dst_port,
+                'dst_wildcard': str(self.dst_network.hostmask),
+                'actions': self.actions.copy(),
+            },
             'info': self.info
         }
 
 
 class PolicyService(BaseService):
+
+    # TYPES = (
+    #     (1, 'Static'),
+    #     (2, 'Automate')
+    # )
+
     def __init__(self):
         super(PolicyService, self).__init__()
         self.policy = self.db.policy
         self.policy_pending = self.db.policy_pending
+
+    def get_by_id(self, _id):
+        return self.policy.find_one({"_id": ObjectId(_id)})
 
     def get_flows_by_state(self, state, limit=10):
         if state not in FlowState:
@@ -130,6 +163,58 @@ class PolicyService(BaseService):
             'created_at': sdn_utils.datetime_now()
         })
 
+    def add_or_update_flow_routing(self, flow_routing):
+        # if flow_routing.get('flow_id'):
+        #     old_flow = self.policy.find_one({
+        #         ''
+        #     })
+        #     if old_flow:
+        #         old_flow['new_flow'] = flow_routing
+        #         old_flow['updated_at'] = sdn_utils.datetime_now()
+        #         self.policy.update_one({'flow_id': ''}, {'$set': old_flow})
+        #         return True
+        new_flow = flow_routing['new_flow']
+        old_flow = self.policy.find_one({
+            'src_ip': new_flow['src_ip'],
+            'src_port': new_flow['src_port'],
+            'src_wildcard': new_flow['src_wildcard'],
+            'dst_ip': new_flow['dst_ip'],
+            'dst_port': new_flow['dst_port'],
+            'dst_wildcard': new_flow['dst_wildcard']
+        })
+
+        now = sdn_utils.datetime_now()
+
+        flow_routing['updated_at'] = now
+        if old_flow:
+            self.policy.update_one({
+                '_id': old_flow['_id']
+            }, {'$set': {
+                'new_flow': flow_routing['new_flow'],
+                'info': flow_routing['info']
+            }})
+            return True
+
+        flow_routing['created_at'] = now
+        self.policy.insert_one(flow_routing)
+        return True
+
+    def find_pending_apply(self, limit=None):
+        flow_list = self.policy.find({
+            'info.status': {'$in': [
+                PolicyRoute.STATUS_WAIT_APPLY,
+                PolicyRoute.STATUS_WAIT_REMOVE,
+                PolicyRoute.STATUS_WAIT_UPDATE
+            ]}
+        })
+
+        if isinstance(limit, int):
+            flow_list = flow_list.limit(limit)
+
+        flow_list = flow_list.sort('updated_at', 1)
+
+        return flow_list
+
     def get_pending(self, limit=None, device_ip=None):
 
         policy_list = self.policy_pending.find({})
@@ -139,6 +224,22 @@ class PolicyService(BaseService):
             policy_list.limit(limit)
 
         return policy_list
+
+    def set_status_apply(self, flow_id: int):
+        self.policy.update_one({
+            'flow_id': flow_id
+        }, {'$set': {'status': PolicyRoute.STATUS_ACTIVE, 'new_flow': {}}})
+
+    def set_status_wait_remove(self, flow_id: int):
+        self.policy.update_one({
+            'flow_id': flow_id
+        }, {'$set': {'status': PolicyRoute.STATUS_WAIT_REMOVE}})
+
+    def update_flow(self, flow):
+        flow['updated_at'] = sdn_utils.datetime_now()
+        self.policy.update_one({
+            '_id': flow['_id']
+        }, {'$set': flow})
 
     def sum_bytes_pending_has_pass_interface(self, interface_ip, limit=1, side='in'):
         if side == 'in':
@@ -191,9 +292,11 @@ class PolicyService(BaseService):
             'policy_id': policy['policy_id']
         }, policy, upsert=True)
 
-    def get_policy_old_path_has_pass_interface(self, interface_ip, limit=1, side='in', device_ip=None):
+    def get_policy_old_path_has_pass_interface(self, interface_ip: str, submit_from_type: int, limit=1, side='in',
+                                               device_ip=None):
         db_filter = {
-            'info.old_path_link.in': interface_ip
+            'info.old_path_link.in': interface_ip,
+            'info.submit_from.type': submit_from_type
         }
         if device_ip:
             db_filter['info.submit_from.device_ip'] = device_ip
@@ -206,6 +309,9 @@ class PolicyService(BaseService):
 
     def get_all(self):
         return self.policy.find()
+
+    def get_by_submit_from_type(self, submit_from_type: int, limit=None, skip=None):
+        return self.policy.find({'info.submit_from.type': submit_from_type})
 
     def add_remove_policy_pending(self, policy):
         """

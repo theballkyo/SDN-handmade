@@ -192,7 +192,9 @@ async def get_routes(host, community, port=161):
 async def get_system_info(host, community, port=161):
     """
     """
-
+    # Serial number !?
+    # 1.3.6.1.2.1.47.1.1.1.1.11.1
+    #
     object_types = {
         'description': ObjectType(ObjectIdentity('1.3.6.1.2.1.1.1')),
         'uptime': ObjectType(ObjectIdentity('1.3.6.1.2.1.1.3')),

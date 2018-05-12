@@ -1,6 +1,7 @@
 from repository.base_service import BaseService
 from pymongo import UpdateOne
 import netaddr
+from bson.objectid import ObjectId
 
 
 class LinkService(BaseService):
@@ -18,18 +19,24 @@ class LinkService(BaseService):
                     'dst_node_ip': link['dst_node_ip'],
                     'dst_if_ip': link['dst_if_ip']
                 }, {
-                    '$set': {
-                        'src_node_ip': link['src_node_ip'],
-                        'dst_node_ip': link['dst_node_ip'],
-                        'src_if_ip': link['src_if_ip'],
-                        'dst_if_ip': link['dst_if_ip'],
-                        'src_if_index': link['src_if_index'],
-                        'dst_if_index': link['dst_if_index'],
-                        'src_in_use': link['src_in_use'],
-                        'src_out_use': link['src_out_use'],
-                        'dst_in_use': link['dst_in_use'],
-                        'dst_out_use': link['dst_out_use']
-                    }
+                    '$set': link
+                    # '$set': {
+                    #     'src_node_id': link['src_node_id'],
+                    #     'dst_node_id': link['dst_node_id'],
+                    #     'src_node_ip': link['src_node_ip'],
+                    #     'dst_node_ip': link['dst_node_ip'],
+                    #     'src_if_ip': link['src_if_ip'],
+                    #     'dst_if_ip': link['dst_if_ip'],
+                    #     'src_if_index': link['src_if_index'],
+                    #     'dst_if_index': link['dst_if_index'],
+                    #     'src_in_use': link['src_in_use'],
+                    #     'src_out_use': link['src_out_use'],
+                    #     'dst_in_use': link['dst_in_use'],
+                    #     'dst_out_use': link['dst_out_use'],
+                    #     'src_node_hostname': link['src_node_hostname'],
+                    #     'dst_node_hostname': link['dst_node_hostname'],
+                    #     'link_min_speed': link['link_min_speed']
+                    # }
                 }, upsert=True)
             )
         if not ops:
@@ -69,3 +76,9 @@ class LinkService(BaseService):
             ]
         })
         return link
+
+    def find_by_id(self, id):
+        return self.link.find_one({'_id': ObjectId(id)})
+
+    def get_all(self):
+        return self.link.find()

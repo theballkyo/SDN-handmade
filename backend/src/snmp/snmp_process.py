@@ -38,7 +38,10 @@ async def process_cdp(host, community, port):
 async def process_system(host, community, port):
     device_service = repository.get_service('device')
     system_info = await snmp_async.get_system_info(host, community, port)
+
     interfaces = await snmp_async.get_interfaces(host, community, port)
+    interface_update_time = time.time()
+
     ip_addrs = await snmp_async.get_ip_addr(host, community, port)
 
     if not system_info:
@@ -65,6 +68,8 @@ async def process_system(host, community, port):
         'management_ip': host
     })
 
+    diff_interface_update_time = interface_update_time - my_device.get('interfaces_update_time', 0)
+    diff_interface_update_time *= 100
     try:
         if my_device.get('interfaces'):
             for if_index, interface in enumerate(interfaces):
@@ -76,14 +81,14 @@ async def process_system(host, community, port):
                         bw_in_usage_percent = sdn_utils.cal_bw_usage_percent(
                             in_octets,
                             interface['speed'],
-                            in_in_time)
+                            diff_interface_update_time)
                         # Out
                         out_octets = interface['out_octets'] - my_interface['out_octets']
                         out_in_time = system_info['uptime'] - my_device['uptime']
                         bw_out_usage_percent = sdn_utils.cal_bw_usage_percent(
                             out_octets,
                             interface['speed'],
-                            out_in_time)
+                            diff_interface_update_time)
 
                         # Add information
                         interface['bw_in_usage_octets'] = in_octets
@@ -119,6 +124,7 @@ async def process_system(host, community, port):
         logging.debug("Except: %s", e)
 
     system_info['interfaces'] = interfaces
+    system_info['interfaces_update_time'] = interface_update_time
 
     # Set update time
     system_info['updated_at'] = time.time()

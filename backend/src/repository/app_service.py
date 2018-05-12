@@ -6,8 +6,7 @@ class AppService(BaseService):
         super(AppService, self).__init__()
 
     def is_running(self):
-        app = self.db.app.find_one({}, {'is_running': 1})
-        return app
+        return self.db.app.find_one({}, {'is_running': 1})
 
     def set_running(self, running):
         self.db.app.update_one({}, {

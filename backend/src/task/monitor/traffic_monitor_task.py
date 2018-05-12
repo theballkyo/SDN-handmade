@@ -56,75 +56,58 @@ class TrafficMonitorTask:
                 src_if_index = interface['index']
                 src_node_ip = device['management_ip']
 
-                # Todo checking policy pending
-                # pending_policy_set = self.policy_service.sum_bytes_pending_has_pass_interface(src_if_ip)
-                # pending_policy_set = list(pending_policy_set)
-                # if pending_policy_set:
-                #     logging.debug("Found Pending policy: %s", pending_policy_set)
-                #     # if pending_policy_set:
-                #     total = pending_policy_set[0]
-                #     new_utilize = interface['bw_in_usage_persec'] - total['total']
-                #     new_utilize_percent = sdn_utils.fraction_to_percent(new_utilize, interface['speed'])
-                #     if new_utilize_percent < self.utilize:
-                #         continue
-
-                # Not used this
-                # Get last update flow time
-                # last_policy = self.policy_service.get_last_policy_apply(device['management_ip'], projection={
-                #     'created_at': 1
-                # })
-                # if last_policy and last_policy['created_at'] + datetime.timedelta(
-                #         seconds=self.delay) > datetime.datetime.now():
-                #     continue
-
-                # Use this inside
-                # currently interface utilize - In policy flow utilize
-                in_use_policy = self.policy_service.policy.aggregate([
-                    {
-                        '$match': {
-                            "info.submit_from.device_ip": device['management_ip'],
-                            "info.old_path_link.in": src_if_ip
-                        }
-                    },
-                    {
-                        '$group': {
-                            '_id': None,
-                            'total_in_bytes': {
-                                '$sum': '$info.in_bytes_per_sec'
-                            }
-                        }
-                    },
-                    {
-                        '$project': {
-                            '_id': 0,
-                            'total_in_bytes': 1
-                        }
-                    }
-                ])
-
-                in_use_policy = list(in_use_policy)
-
-                # if len(in_use_policy) > 0:
-                #
-                #     in_use_policy = in_use_policy[0]
-                #
-                #     in_policy_utilize = sdn_utils.fraction_to_percent(in_use_policy['total_in_bytes'], interface['speed'])
-                #
-                #     if interface['bw_in_usage_percent'] - in_policy_utilize < self.utilize:
-                #         continue
-
-                # Getting flows
+                # Getting flow routing is apply or in pending
                 # Todo Change query to new calculation
                 in_policies = self.policy_service.policy.find({
-                    "info.old_path": device['management_ip']
+                    # "$or": [
+                    #     {
+                    #         "info.old_path": device['management_ip']
+                    #     },
+                    #     {
+                    #         ""
+                    #     }
+                    # ]
                 }, {
                     'src_ip': 1,
-                    'dst_ip': 1
+                    'dst_ip': 1,
+                    'src_port': 1,
+                    'dst_port': 1,
+                    'new_flow': 1
                 })
-                not_in = {'src_ip': [], 'dst_ip': []}
+                not_in = []
                 for in_policy in in_policies:
-                    not_in['src_ip'].append(in_policy['src_ip'])
-                    not_in['dst_ip'].append(in_policy['dst_ip'])
+                    # Todo support port range
+
+                    ipv4_src_addr = in_policy.get('src_ip')
+                    if not ipv4_src_addr:
+                        ipv4_src_addr = in_policy['new_flow']['src_ip']
+
+                    ipv4_dst_addr = in_policy.get('dst_ip')
+                    if not ipv4_dst_addr:
+                        ipv4_dst_addr = in_policy['new_flow']['dst_ip']
+
+                    l4_src_port = in_policy.get('src_port')
+                    if not l4_src_port:
+                        l4_src_port = in_policy['new_flow']['src_port']
+
+                    l4_dst_port = in_policy.get('dst_port')
+                    if not l4_dst_port:
+                        l4_dst_port = in_policy['new_flow']['dst_port']
+
+                    not_in.append({
+                        'ipv4_src_addr': {
+                            '$ne': ipv4_src_addr
+                        },
+                        'ipv4_dst_addr': {
+                            '$ne': ipv4_dst_addr
+                        },
+                        'l4_src_port': {
+                            '$ne': l4_src_port
+                        },
+                        'l4_dst_port': {
+                            '$ne': l4_dst_port
+                        }
+                    })
 
                 # Todo support port, protocol
                 flows = self.netflow_service.summary_flow_v2(
@@ -137,8 +120,11 @@ class TrafficMonitorTask:
                     # dst_flow = flow['data'][0]['_id']['ipv4_dst_addr']
 
                     src_flow = flow['_id']['ipv4_src_addr']
+                    src_port = flow['_id']['l4_src_port']
                     dst_flow = flow['_id']['ipv4_dst_addr']
+                    dst_port = flow['_id']['l4_dst_port']
 
+                    # Boardcast
                     if dst_flow == '255.255.255.255':
                         continue
 
@@ -182,7 +168,12 @@ class TrafficMonitorTask:
 
                     new_path_link = []
 
-                    policy_route.set_policy(src_network=src_flow, dst_network=dst_flow)
+                    policy_route.set_name("generate-{:.0f}".format(time.time() * 1000))
+                    policy_route.set_policy(src_network=src_flow,
+                                            dst_network=dst_flow,
+                                            src_port=src_port,
+                                            dst_port=dst_port)
+
                     for hop_index in range(len(new_path['path_link'])):
                         logging.debug(
                             "Node: %s <=> Exit-IF: %s, Next-hop: %s",
@@ -197,7 +188,7 @@ class TrafficMonitorTask:
                         })
                         policy_route.add_action(
                             new_path['path'][hop_index],  # Node IP
-                            'next-hop',  # Action
+                            PolicyRoute.ACTION_NEXT_HOP_IP,  # Action
                             new_path['path_link'][hop_index]['in']['ipv4_address']  # Data
                         )
 
@@ -212,13 +203,13 @@ class TrafficMonitorTask:
                     policy_route.info['in_bytes'] = flow['in_bytes']
                     policy_route.info['in_pkts'] = flow['in_pkts']
                     policy_route.info['submit_from'] = {
-                        'type': 'automate',
+                        'type': PolicyRoute.TYPE_AUTOMATE,
                         'device_ip': device['management_ip']
                     }
+                    policy_route.info['status'] = PolicyRoute.STATUS_WAIT_APPLY
 
                     policy = policy_route.get_policy()
-                    self.policy_service.add_new_pending_policy(policy)
-
+                    self.policy_service.add_or_update_flow_routing(policy)
                     return
 
         self.last_run = time.time()
@@ -288,10 +279,10 @@ class TrafficMonitorTask:
             # if initial:
             self.reverse_path.append(node_ip['src_node_ip'])
             self.reverse_path_link.append({
-                # 'out': node_ip['src_if_ip'],
-                # 'in': node_ip['dst_if_ip']
-                'out': node_ip['dst_if_ip'],
-                'in': node_ip['src_if_ip']
+                'out': node_ip['src_if_ip'],
+                'in': node_ip['dst_if_ip']
+                # 'out': node_ip['dst_if_ip'],
+                # 'in': node_ip['src_if_ip']
             })
 
             # Find path from prevent path of active flow

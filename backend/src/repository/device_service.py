@@ -1,6 +1,7 @@
 import time
 
 from repository import BaseService
+from bson.objectid import ObjectId
 
 
 class DeviceService(BaseService):
@@ -11,9 +12,22 @@ class DeviceService(BaseService):
         super(DeviceService, self).__init__(*args, **kwargs)
         self.device = self.db.device
 
+    @staticmethod
+    def project_simple():
+        return {
+            'type': 1,
+            'device_ip': 1,
+            'description': 1,
+            'management_ip': 1,
+            'interfaces': 1
+        }
+
     def get_device(self, management_ip):
         """ Get device object """
         return self.device.find_one({'management_ip': management_ip})
+
+    def get_by_id(self, _id):
+        return self.device.find_one({'_id': ObjectId(_id)})
 
     def get_active(self):
         """ Get devices is active """
@@ -68,12 +82,16 @@ class DeviceService(BaseService):
         ssh_info['device_type'] = data['type']
         return ssh_info
 
-    def find_by_if_ip(self, ip):
+    def find_by_if_ip(self, ip, project=None):
         """
         """
+        if project is None:
+            return self.device.find_one({
+                'interfaces.ipv4_address': ip
+            })
         return self.device.find_one({
             'interfaces.ipv4_address': ip
-        })
+        }, project)
 
     def get_if_ip_by_if_index(self, management_ip, index):
 
@@ -159,7 +177,7 @@ class DeviceService(BaseService):
             'snmp_info': 1,
             'management_ip': 1,
             'interfaces': 1
-        }).sort({cond: -1})
+        }).sort([('interfaces.' + key_name, -1)])
 
     def get_device_type(self, management_ip):
         device = self.device.find_one({

@@ -1,52 +1,90 @@
 <template>
   <div>
-    <nuxt/>
+    <div class="header collapse d-lg-flex p-0" id="headerMenuCollapse">
+      <div class="container">
+        <div class="row row align-items-center">
+          <div class="col col-lg order-lg-first">
+            <ul class="nav nav-tabs border-0 flex-column flex-lg-row">
+              <!-- <li class="nav-item">
+                <router-link active-class="active" class="nav-link" aria-current="true" data-toggle="false" to="/" exact>
+                  <i class="fe fe-home"></i> Home</router-link>
+              </li> -->
+              <li class="nav-item">
+                <router-link active-class="active" class="nav-link" aria-current="true" data-toggle="false" to="/graph">
+                  <i class="fe fe-box"></i> Graph</router-link>
+              </li>
+              <li class="nav-item">
+                <a href="javascript:void(0)" class="nav-link" data-toggle="dropdown">
+                  <i class="fe fe-box"></i> Device</a>
+                <div class="dropdown-menu dropdown-menu-arrow">
+                  <router-link data-toggle="false" active-class="active" class="dropdown-item " to="/device/add">Add new</router-link>
+                  <router-link data-toggle="false" active-class="active" class="dropdown-item " to="/device/view">View</router-link>
+                </div>
+              </li>
+              <li class="nav-item">
+                <a href="javascript:void(0)" class="nav-link" data-toggle="dropdown">
+                  <i class="fe fe-box"></i> Flow</a>
+                <div class="dropdown-menu dropdown-menu-arrow">
+                  <router-link active-class="active" class="dropdown-item" to="/flow/stat" exact>Flow stat</router-link>
+                  <router-link data-toggle="false" active-class="active" class="dropdown-item" to="/flow/routing" exact>Flow routing</router-link>
+                  <router-link data-toggle="false" active-class="active" class="dropdown-item" to="/flow/routing/add" exact>Add static flow routing</router-link>
+                </div>
+              </li>
+              <li class="nav-item">
+                <a href="javascript:void(0)" class="nav-link" data-toggle="dropdown">
+                  <i class="fe fe-box"></i> System</a>
+                <div class="dropdown-menu dropdown-menu-arrow">
+                  <!-- <router-link data-toggle="false" active-class="active" class="dropdown-item " to="/system/info" exact>View</router-link> -->
+                  <router-link data-toggle="false" active-class="active" class="dropdown-item " to="/system/setting" exact>Setting</router-link>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page">
+      <div class="page-main">
+        <div class="my-3 my-md-5">
+          <div class="container">
+            <div class="page-header">
+              <h1 class="page-title">
+
+                <!-- SDN handmade management -->
+              </h1>
+            </div>
+
+            <nuxt/>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="footer">
+      <div class="container">
+        <div class="row align-items-center flex-row-reverse">
+          <div class="col-auto ml-lg-auto">
+            <div class="row align-items-center">
+
+            </div>
+          </div>
+          <div class="col-12 col-lg-auto mt-3 mt-lg-0 text-center">
+            Copyright © 2018 Developed by
+            <a href="https://github.com/theballkyo">Theballkyo</a>. Theme by
+            <a href="https://codecalm.net" target="_blank">codecalm.net</a> All rights reserved. Version {{ version }}
+          </div>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
 
-<style>
-html {
-  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-size: 16px;
-  word-spacing: 1px;
-  -ms-text-size-adjust: 100%;
-  -webkit-text-size-adjust: 100%;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-font-smoothing: antialiased;
-  box-sizing: border-box;
-}
-
-*, *:before, *:after {
-  box-sizing: border-box;
-  margin: 0;
-}
-
-.button--green {
-  display: inline-block;
-  border-radius: 4px;
-  border: 1px solid #3b8070;
-  color: #3b8070;
-  text-decoration: none;
-  padding: 10px 30px;
-}
-
-.button--green:hover {
-  color: #fff;
-  background-color: #3b8070;
-}
-
-.button--grey {
-  display: inline-block;
-  border-radius: 4px;
-  border: 1px solid #35495e;
-  color: #35495e;
-  text-decoration: none;
-  padding: 10px 30px;
-  margin-left: 15px;
-}
-
-.button--grey:hover {
-  color: #fff;
-  background-color: #35495e;
-}
-</style>
+<script>
+export default {
+  data() {
+    return {
+      version: "1.0.0 Release"
+    };
+  }
+};
+</script>

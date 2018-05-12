@@ -20,128 +20,129 @@ from task.monitor.clear_policy_task import ClearPolicyTask
 from task.monitor.clear_inactive_flow_task import ClearInactiveFlowTask
 from task.monitor.policy_monitor_task import PolicyMonitorTask
 from task.monitor.traffic_monitor_task import TrafficMonitorTask
+from task.monitor.clear_device_task import ClearDeviceTask
 
 
-class Router(Device):
-    """ Device is a Router
-    """
-
-    def __init__(self, device_info, ssh_info, snmp_info):
-        super(Router, self).__init__(device_info, ssh_info, snmp_info)
-        self.type = 'router'
-
-
-class CiscoRouter(Router):
-    """ Device is a Cisco Router
-    """
-
-    def __init__(self, device_info, ssh_info, snmp_info):
-        super(CiscoRouter, self).__init__(device_info, ssh_info, snmp_info)
-        self.ssh_info['device_type'] = 'cisco_ios'
-
-        self.net_connect = ConnectHandler(**ssh_info)
-
-    def remote_command(self, command):
-        """ Connect SSH to device
-        """
-        if not self.test_ssh_connect():
-            return False
-        self.net_connect.enable()
-        output = self.net_connect.send_command(command)
-        return output
-
-    def test_ssh_connect(self):
-        if self.net_connect is None or not self.net_connect.is_alive():
-            try:
-                logging.debug("ConnectHandler")
-                self.net_connect = ConnectHandler(**self.ssh_info)
-            except NetMikoTimeoutException:
-                self.net_connect = None
-                logging.info("Error: Can't SSH to device ip {}".format(self.ip))
-                return False
-        # TEST
-        retry = 0
-        max_retry = 3
-        while retry < max_retry:
-            try:
-                if retry > 0:
-                    self.net_connect = ConnectHandler(**self.ssh_info)
-                self.net_connect.enable()
-                return True
-            except (NetMikoTimeoutException, EOFError):
-                retry += 1
-        return False
-
-    def send_config_set(self, config_command):
-        if not self.test_ssh_connect():
-            return False
-        try:
-            self.net_connect.enable()
-            output = self.net_connect.send_config_set(config_command)
-            return output
-        except (NetMikoTimeoutException, EOFError):
-            return False
-
-    def update_flow(self, flow):
-        """ apply action to device
-        """
-        my_action = None
-        current_action = None
-        for action in flow['action_pending']:
-            if action['device_ip'] == self.ip:
-                # is_in_flow_pending = True
-                my_action = action
-                break
-
-        if my_action is None:
-            if not flow['is_pending']:
-                return True
-        else:
-            if my_action.get('rule') == 'remove':
-                command = sdn_utils.generate_flow_remove_command(flow)
-                logging.debug(command)
-                if not self.send_config_set(command):
-                    return False
-                return True
-            else:
-                for action in flow['action']:
-                    if action['device_ip'] == self.ip:
-                        current_action = action
-                        break
-
-        # Apply interface policy
-        # Todo
-
-        # Grouping commands
-        command = sdn_utils.generate_flow_command(flow, my_action, current_action)
-        logging.info(command)
-        if not self.send_config_set(command):
-            return False
-        return True
-
-    def get_serial_number(self):
-        """ Get device serial Number
-        """
-        return self.remote_command("show version | inc Processor board ID")
-
-    def get_route_map(self):
-        """ Get current route map on device
-        """
-        # Todo Create function for this
-        pass
-
-    def get_acl_list(self):
-        """ Get current access list on device
-        """
-        # Todo Create function for this
-        pass
-
-
-class CiscoIosRouter(Router):
-    def __init__(self, device_info, ssh_info, snmp_info):
-        super(CiscoIosRouter, self).__init__(device_info, ssh_info, snmp_info)
-        self.type = 'cisco_ios'
-
+# class Router(Device):
+#     """ Device is a Router
+#     """
+#
+#     def __init__(self, device_info, ssh_info, snmp_info):
+#         super(Router, self).__init__(device_info, ssh_info, snmp_info)
+#         self.type = 'router'
+#
+#
+# class CiscoRouter(Router):
+#     """ Device is a Cisco Router
+#     """
+#
+#     def __init__(self, device_info, ssh_info, snmp_info):
+#         super(CiscoRouter, self).__init__(device_info, ssh_info, snmp_info)
+#         self.ssh_info['device_type'] = 'cisco_ios'
+#
+#         self.net_connect = ConnectHandler(**ssh_info)
+#
+#     def remote_command(self, command):
+#         """ Connect SSH to device
+#         """
+#         if not self.test_ssh_connect():
+#             return False
+#         self.net_connect.enable()
+#         output = self.net_connect.send_command(command)
+#         return output
+#
+#     def test_ssh_connect(self):
+#         if self.net_connect is None or not self.net_connect.is_alive():
+#             try:
+#                 logging.debug("ConnectHandler")
+#                 self.net_connect = ConnectHandler(**self.ssh_info)
+#             except NetMikoTimeoutException:
+#                 self.net_connect = None
+#                 logging.info("Error: Can't SSH to device ip {}".format(self.ip))
+#                 return False
+#         # TEST
+#         retry = 0
+#         max_retry = 3
+#         while retry < max_retry:
+#             try:
+#                 if retry > 0:
+#                     self.net_connect = ConnectHandler(**self.ssh_info)
+#                 self.net_connect.enable()
+#                 return True
+#             except (NetMikoTimeoutException, EOFError):
+#                 retry += 1
+#         return False
+#
+#     def send_config_set(self, config_command):
+#         if not self.test_ssh_connect():
+#             return False
+#         try:
+#             self.net_connect.enable()
+#             output = self.net_connect.send_config_set(config_command)
+#             return output
+#         except (NetMikoTimeoutException, EOFError):
+#             return False
+#
+#     def update_flow(self, flow):
+#         """ apply action to device
+#         """
+#         my_action = None
+#         current_action = None
+#         for action in flow['action_pending']:
+#             if action['device_ip'] == self.ip:
+#                 # is_in_flow_pending = True
+#                 my_action = action
+#                 break
+#
+#         if my_action is None:
+#             if not flow['is_pending']:
+#                 return True
+#         else:
+#             if my_action.get('rule') == 'remove':
+#                 command = sdn_utils.generate_flow_remove_command(flow)
+#                 logging.debug(command)
+#                 if not self.send_config_set(command):
+#                     return False
+#                 return True
+#             else:
+#                 for action in flow['action']:
+#                     if action['device_ip'] == self.ip:
+#                         current_action = action
+#                         break
+#
+#         # Apply interface policy
+#         # Todo
+#
+#         # Grouping commands
+#         command = sdn_utils.generate_flow_command(flow, my_action, current_action)
+#         logging.info(command)
+#         if not self.send_config_set(command):
+#             return False
+#         return True
+#
+#     def get_serial_number(self):
+#         """ Get device serial Number
+#         """
+#         return self.remote_command("show version | inc Processor board ID")
+#
+#     def get_route_map(self):
+#         """ Get current route map on device
+#         """
+#         # Todo Create function for this
+#         pass
+#
+#     def get_acl_list(self):
+#         """ Get current access list on device
+#         """
+#         # Todo Create function for this
+#         pass
+#
+#
+# class CiscoIosRouter(Router):
+#     def __init__(self, device_info, ssh_info, snmp_info):
+#         super(CiscoIosRouter, self).__init__(device_info, ssh_info, snmp_info)
+#         self.type = 'cisco_ios'
+#
 
 class Topology:
     """ Topology class
@@ -169,7 +170,8 @@ class Topology:
             ClearInactiveFlowTask,
             ClearPolicyTask,
             TrafficMonitorTask,
-            PolicyMonitorTask
+            PolicyMonitorTask,
+            ClearDeviceTask
         )
         self._ssh_worker_t = None
 

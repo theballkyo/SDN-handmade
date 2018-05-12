@@ -24,6 +24,7 @@ class ClearInactiveFlowTask:
         :param ssh_connection:
         :return:
         """
+        # later_time = datetime.datetime.utcnow() - datetime.timedelta(seconds=self.inactive_time)
         later_time = datetime.datetime.now() - datetime.timedelta(seconds=self.inactive_time)
         self.netflow_service.netflow.delete_many({'created_at': {'$lte': later_time}})
         return True

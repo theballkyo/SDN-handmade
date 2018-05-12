@@ -208,14 +208,21 @@ class NetflowService(BaseService):
             'from_ip': from_ip
         }
         if not_in:
-            match['$or'] = [
-                {'ipv4_src_addr': {
-                    '$nin': not_in['src_ip']
-                }},
-                {'ipv4_dst_addr': {
-                    '$nin': not_in['dst_ip']
-                }}
-            ]
+            # match['$or'] = [
+            #     {'ipv4_src_addr': {
+            #         '$nin': not_in['src_ip']
+            #     }},
+            #     # {'l4_src_port': {
+            #     #     '$nin': not_in['src_port']
+            #     # }},
+            #     {'ipv4_dst_addr': {
+            #         '$nin': not_in['dst_ip']
+            #     }},
+            #     # {'ipv4_dst_port': {
+            #     #     '$nin': not_in['dst_port']
+            #     # }}
+            # ]
+            match['$and'] = not_in
 
         return self.netflow.aggregate([
             {'$match': match},
@@ -223,7 +230,9 @@ class NetflowService(BaseService):
                 '_id': {  # Currently ignore port, proto
                     # Todo support port, protocol
                     "ipv4_src_addr": "$ipv4_src_addr",
-                    "ipv4_dst_addr": "$ipv4_dst_addr"
+                    "ipv4_dst_addr": "$ipv4_dst_addr",
+                    "l4_src_port": "$l4_src_port",
+                    "l4_dst_port": "$l4_dst_port"
                 },
                 'in_bytes': {'$sum': '$in_bytes'},
                 'in_pkts': {'$sum': '$in_pkts'},
@@ -295,3 +304,6 @@ class NetflowService(BaseService):
             'ipv4_src_addr': src_ip,
             'ipv4_dst_addr': dst_ip
         })
+
+    def get_all(self):
+        return self.netflow.find().sort("from_ip", 1)

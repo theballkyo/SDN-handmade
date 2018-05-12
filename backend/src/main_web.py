@@ -7,42 +7,16 @@ import logging
 
 
 def main():
-    """ Run SDN Controller Server
+    """ Run Web server
     """
-    import time
     import logbug as lb
-    import sdn_handmade as sdn
-    from cli.cli_controller import CLIController
-    import settings
     from api.rest_server import RestServer
 
     lb.init(logging.INFO)
 
-    # Create topology
-    topology = sdn.Topology(
-        netflow_ip=settings.netflow['bind_ip'],
-        netflow_port=settings.netflow['bind_port']
-    )
-
-    # Start topology loop
-    topology.run()
-
     # Start REST API Server
     rest_server = RestServer()
-    # rest_server.run()
-
-    # Start CLI
-    cli = CLIController()
-    cli.init(topology, lb.get(), settings.app['version'])
-
-    cli.cmdloop("Welcome to SDN Handmade. Type help to list commands.\n")
-
-    lb.get().pre_shutdown()
-    time.sleep(0.5)
-    topology.shutdown()
-    rest_server.shutdown()
-    time.sleep(0.5)
-    lb.get().post_shutdown()
+    rest_server.run()
 
 
 if __name__ == '__main__':

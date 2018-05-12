@@ -13,8 +13,13 @@
     "precommit": "npm run lint"
   },
   "dependencies": {
+    "@nuxtjs/axios": "^5.3.1",
+    "jsnetworkx": "^0.3.4",
+    "moment-timezone": "^0.5.16",
     "nuxt": "^1.0.0",
-    "vis": "^4.21.0"
+    "sweetalert": "^2.1.0",
+    "vis": "^4.21.0",
+    "vue-moment": "^3.2.0"
   },
   "devDependencies": {
     "babel-eslint": "^8.2.1",

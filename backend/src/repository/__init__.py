@@ -18,6 +18,7 @@ _services = {}
 _list_service = {
     'app_service': AppService,
     'cdp_service': CdpService,
+    'device_neighbor_service': CdpService,
     'device_service': DeviceService,
     'link_service': LinkService,
     'netflow_service': NetflowService,
@@ -28,6 +29,21 @@ _list_service = {
     'topology_path_service': TopologyPathService,
     'topology_service': TopologyService
 }
+
+_current_pid = None
+
+
+def get_all_service(remove_suffix=True):
+    global _services, _current_pid
+    services = {}
+    for name, _ in _list_service.items():
+        if remove_suffix:
+            alias = name.replace('_service', '')
+        else:
+            alias = name
+        services[alias] = get_service(name)
+    print(services)
+    return services
 
 
 def get_service(name):
@@ -51,4 +67,4 @@ def get_flow_table_service():
     return _services['flow_table']
 
 
-__all__ = ["BaseService", "PolicyRoute", "get_service", "get_flow_table_service"]
+__all__ = ["BaseService", "PolicyRoute", "get_service", "get_all_service", "get_flow_table_service"]
