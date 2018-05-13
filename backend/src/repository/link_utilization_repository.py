@@ -1,13 +1,14 @@
-from repository.base_service import BaseService
+from repository.repository import Repository
 from pymongo import UpdateOne
 import netaddr
 from bson.objectid import ObjectId
 
 
-class LinkService(BaseService):
+class LinkUtilizationRepository(Repository):
     def __init__(self):
-        super(LinkService, self).__init__()
-        self.link = self.db.link
+        super(LinkUtilizationRepository, self).__init__()
+        self.link = self.db.link_utilization  # Todo deprecated
+        self.model = self.db.link_utilization
 
     def add_links(self, links):
         ops = []

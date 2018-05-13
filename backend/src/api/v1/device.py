@@ -1,21 +1,31 @@
-from sanic.views import HTTPMethodView
-from sanic.response import text, json
-from bson.json_util import dumps
 from ipaddress import IPv4Address, AddressValueError
+
+from bson.json_util import dumps
+from sanic.response import json
+from sanic.views import HTTPMethodView
+
+from repository import DeviceRepository
 
 
 class DeviceView(HTTPMethodView):
 
-    def get(self, request, id=None, ip=None):
-        if ip:
-            device_repo = request.app.db['device']
-            device = device_repo.find_by_if_ip(ip, project=device_repo.project_simple())
-            return json({'device': device}, dumps=dumps)
-        if id:
-            device = request.app.db['device'].get_by_id(id)
-            return json({'device': device}, dumps=dumps)
-        devices = request.app.db['device'].get_all()
-        return json({"devices": devices, "status": "ok"}, dumps=dumps)
+    def get(self, request, device_id=None):
+        device_repo = request.app.db['device']
+
+        if device_id is None:
+            devices = device_repo.get_all()
+            return json({"devices": devices, "success": True}, dumps=dumps)
+
+        try:
+            ip_address = IPv4Address(device_id)
+            ip_address = str(ip_address)
+            device = device_repo.find_by_if_ip(ip_address,
+                                               project=device_repo.project_simple()
+                                               )
+        except AddressValueError:
+            device = request.app.db['device'].get_by_id(device_id)
+
+        return json({"device": device, "success": True}, dumps=dumps)
 
     def post(self, request):
         device_repo = request.app.db['device']
@@ -31,9 +41,11 @@ class DeviceView(HTTPMethodView):
                     'secret': request.json['ssh_info']['secret']
                 },
                 'snmp_info': {
+                    'version': request.json['snmp_info']['version'],
                     'community': request.json['snmp_info']['community'],
                     'port': request.json['snmp_info']['port']
-                }
+                },
+                'status': DeviceRepository.STATUS_ACTIVE
             }
         except ValueError:
             return json({'success': False, 'message': 'Invalidate form'})
@@ -41,8 +53,17 @@ class DeviceView(HTTPMethodView):
         device_repo.add_device(device)
         return json({'success': True, 'message': request.json})
 
+    def patch(self, request, device_id):
+        request.app.db["device"].set_information(device_id, request.json)
+        return json({"status": True, "message": "Update device!"})
+
     def delete(self, request):
-        pass
+        device_id = request.args.get('device_id')
+        if not device_id:
+            return json({'status': False, 'message': 'Flow id not exist'})
+
+        request.app.db['device'].set_status_wait_remove(device_id)
+        return json({'status': True, 'message': 'Removed device'}, status=200)
 
 
 class DeviceNeighborView(HTTPMethodView):

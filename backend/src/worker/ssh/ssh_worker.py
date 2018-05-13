@@ -8,7 +8,8 @@ from threading import Lock
 from queue import Queue, Empty
 
 from remote_access.ssh.worker_queue import SSHQueueWorker
-from services import get_service
+from repository import DeviceRepository
+import repository
 
 
 class SSHConnection:
@@ -25,6 +26,23 @@ class SSHConnection:
         self.lock.acquire()
         del self.devices[device_ip]
         self.lock.release()
+
+    def update(self, device_ip, ssh_info):
+        logging.info("Wait update")
+        self.lock.acquire()
+        logging.info("Start Update")
+        try:
+            self.devices[device_ip]['work_q'].put({
+                "type": "reconnect",
+                "ssh_info": ssh_info
+            })
+            result = self.devices[device_ip]["result_q"].get()
+            logging.info(result)
+        except Exception as e:
+            logging.info(e)
+        logging.info("End Update")
+        self.lock.release()
+        logging.info("Release Update")
 
     def check_connection(self, device_list):
         logging.debug("Check connect")
@@ -74,7 +92,7 @@ class SSHWorker:
         # self.max_worker = 2  # Maximum update flow worker
         self.set_worker = []
         self.stop_signal = False
-        self.device_service = get_service("device")
+        self.device_repository = repository.get("device")
         self.results_q = Queue()
         self.ssh_connection = SSHConnection()
         self.manager = Manager()
@@ -99,10 +117,26 @@ class SSHWorker:
             except Empty:
                 pass
 
-            devices = self.device_service.get_all()
+            devices = self.device_repository.get_all()
             for device in devices:
                 # If exists skip
                 if device['management_ip'] in _running.keys():
+                    if device.get("status") == DeviceRepository.STATUS_WAIT_UPDATE:
+                        # logging.info("Start ssh update")
+                        device_ip = device['management_ip']
+                        ssh_info = device['ssh_info']
+                        ssh_info['ip'] = device['management_ip']
+                        ssh_info['device_type'] = device['type']
+                        # logging.info(ssh_info)
+                        results_q.put({
+                            "type": "update",
+                            "device_ip": device_ip,
+                            "ssh_info": ssh_info
+                        })
+                        self.device_repository.model.update_one({
+                            "management_ip": device_ip
+                        }, {"$set": {"status": DeviceRepository.STATUS_ACTIVE}})
+
                     continue
 
                 ssh_info = device['ssh_info']
@@ -140,10 +174,13 @@ class SSHWorker:
         # Loop when results_q is empty
         while True:
             try:
+                logging.info(self.results_q.qsize())
                 result = self.results_q.get(timeout=0.05)
                 if result:
                     if result.get('remove'):
                         self.ssh_connection.remove_connection(result['device_ip'])
+                    elif result.get("type") == "update":
+                        self.ssh_connection.update(result["device_ip"], result["ssh_info"])
                     else:
                         self.ssh_connection.add_connection(result)
             except Empty:

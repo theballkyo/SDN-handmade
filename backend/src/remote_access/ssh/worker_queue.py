@@ -6,6 +6,7 @@ from netmiko.ssh_exception import NetMikoTimeoutException, NetMikoAuthentication
 import threading
 import multiprocessing as mp
 import logging
+import repository
 
 
 class SSHQueueWorker(threading.Thread):
@@ -24,6 +25,7 @@ class SSHQueueWorker(threading.Thread):
         self._lock = threading.Lock()
 
         self.setName('SSH-Q-WORKER' + ssh_info['ip'])
+        self.device_repository = repository.get("device")
 
     def run(self):
         self.new_worker_queue()
@@ -34,6 +36,7 @@ class SSHQueueWorker(threading.Thread):
         retry_count = 0
         while True:
             self._is_connect.value = False
+            self.device_repository.set_ssh_is_connect_by_mgmt_ip(ssh_info['ip'], False)
             try:
                 net_connect = netmiko.ConnectHandler(
                     device_type=ssh_info['device_type'],
@@ -51,6 +54,8 @@ class SSHQueueWorker(threading.Thread):
                 reconnect = False
                 self._is_connect.value = True
                 retry_count = 0
+                # Set ssh is connect status
+                self.device_repository.set_ssh_is_connect_by_mgmt_ip(ssh_info['ip'], True)
             except NetMikoTimeoutException:
                 retry_count += 1
                 logging.info("Name: %s ssh timeout %d", self.getName(), retry_count)
@@ -92,6 +97,12 @@ class SSHQueueWorker(threading.Thread):
                     continue
                 if not work.get('type', None):
                     continue
+
+                if work["type"] == "reconnect":
+                    ssh_info = work["ssh_info"]
+                    self._result_q.put("ok")
+                    net_connect.disconnect()
+                    break
 
                 if work['type'] == 'recheck':
                     self._result_q.put(self._is_connect.value)

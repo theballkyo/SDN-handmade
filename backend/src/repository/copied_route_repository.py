@@ -1,8 +1,9 @@
-from repository import BaseService
 import netaddr
 
+from repository.repository import Repository
 
-class RouteService(BaseService):
+
+class CopiedRouteRepository(Repository):
     route_type = {
         'other': 1,
         'reject': 2,
@@ -11,8 +12,9 @@ class RouteService(BaseService):
     }
 
     def __init__(self, *args, **kwargs):
-        super(RouteService, self).__init__(*args, **kwargs)
-        self.route = self.db.route
+        super(CopiedRouteRepository, self).__init__(*args, **kwargs)
+        self.route = self.db.copied_route  # Todo deprecated
+        self.model = self.db.copied_route
 
     def find_by_device(self, management_ip):
         # Todo fix device_ip to management_ip
@@ -56,3 +58,8 @@ class RouteService(BaseService):
             hosts.append(route['device_ip'])
 
         return hosts
+
+    def delete_all_by_mgmt_ip(self, management_ip: str):
+        return self.model.delete_many({
+            'management_ip': management_ip
+        })

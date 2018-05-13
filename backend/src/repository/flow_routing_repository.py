@@ -1,3 +1,4 @@
+import datetime
 import logging
 from typing import Optional, Dict
 
@@ -6,8 +7,7 @@ from bson import ObjectId
 
 import sdn_utils
 from flow import FlowState
-from repository import BaseService
-import datetime
+from repository.repository import Repository
 
 
 class PolicyRoute:
@@ -23,6 +23,10 @@ class PolicyRoute:
     ACTION_DROP = 1
     ACTION_NEXT_HOP_IP = 2
     ACTION_EXIT_IF = 3
+
+    # Custom
+    # ACTION_NEXT_HOP_IP_CUSTOM = 2
+    # ACTION_EXIT_IF_CUSTOM = 2
 
     FIELDS = ('src_ip',
               'src_wildcard',
@@ -84,9 +88,10 @@ class PolicyRoute:
     def diff(self, new_policy):
         raise NotImplementedError()
 
-    def add_action(self, node, action, data=None):
+    def add_action(self, device_id, management_ip, action, data=None):
         self.actions.append({
-            'management_ip': node,
+            'device_id': device_id,
+            'management_ip': management_ip,
             'action': action,
             'data': data
         })
@@ -120,7 +125,7 @@ class PolicyRoute:
         }
 
 
-class PolicyService(BaseService):
+class FlowRoutingRepository(Repository):
 
     # TYPES = (
     #     (1, 'Static'),
@@ -128,8 +133,9 @@ class PolicyService(BaseService):
     # )
 
     def __init__(self):
-        super(PolicyService, self).__init__()
-        self.policy = self.db.policy
+        super(FlowRoutingRepository, self).__init__()
+        self.policy = self.db.flow_routing  # Todo deprecated
+        self.model = self.db.flow_routing
         self.policy_pending = self.db.policy_pending
 
     def get_by_id(self, _id):
@@ -233,7 +239,7 @@ class PolicyService(BaseService):
     def set_status_wait_remove(self, flow_id: int):
         self.policy.update_one({
             'flow_id': flow_id
-        }, {'$set': {'status': PolicyRoute.STATUS_WAIT_REMOVE}})
+        }, {'$set': {'info.status': PolicyRoute.STATUS_WAIT_REMOVE}})
 
     def update_flow(self, flow):
         flow['updated_at'] = sdn_utils.datetime_now()
@@ -335,3 +341,6 @@ class PolicyService(BaseService):
 
     def remove_policy(self, _id):
         self.policy.remove(_id)
+
+    def remove_by_id(self, _id):
+        self.policy.remove({"_id": ObjectId(_id)})

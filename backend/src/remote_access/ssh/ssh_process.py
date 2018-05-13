@@ -7,8 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import queue
 
+import repository
 import router_command as router_cmd
-import services
 import logging
 
 try:
@@ -116,7 +116,7 @@ async def process_flow(executor, flow):
     # Todo Move to another file
     # Run flow
 
-    device_service = services.DeviceService()
+    device_repository = repository.get("device")
 
     stage_queue = {
         "check_connect": queue.Queue(),
@@ -135,7 +135,7 @@ async def process_flow(executor, flow):
 
     for action in flow.get('action_pending', []):
         device_ip = action["device_ip"]
-        ssh_info = device_service.get_ssh_info(device_ip)
+        ssh_info = device_repository.get_ssh_info(device_ip)
         if not ssh_info:
             continue
 

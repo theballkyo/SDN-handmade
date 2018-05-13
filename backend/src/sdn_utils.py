@@ -43,7 +43,9 @@ def seconds_to_datetime(seconds):
 def unix_to_datetime(unix_time):
     if not isinstance(unix_time, int) and not isinstance(unix_time, float):
         raise ValueError('Unix time must be int or float only.')
-    return datetime.datetime.fromtimestamp(unix_time)
+    # return datetime.datetime.fromtimestamp(unix_time)
+    date = datetime.datetime.utcfromtimestamp(unix_time)
+    return date
 
 
 def datetime_now():

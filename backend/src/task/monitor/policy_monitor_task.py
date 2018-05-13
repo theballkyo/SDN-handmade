@@ -166,35 +166,44 @@ class PolicyMonitorTask:
         # policy_cmd = ''
 
         flow_id = flow.get('flow_id')
-        if not flow_id:
+        if flow_id is None:
             flow_id = self.policy_seq_service.get_new_id()
             # flow['flow_id'] = flow_i
         # logging.info(flow_id)
         new_flow = flow.get('new_flow')
         new_flow['flow_id'] = flow_id
-        flow_name = flow['name']
+        flow_name = flow.get('name')
+        if not flow_name:
+            flow_name = new_flow.get('name')
+
         flow_actions = new_flow['actions']
 
         device_list = {}
         for action in flow_actions:
-            logging.info(pprint.pformat("Node ID: {}".format(action['management_ip'])))
-            device = self.device_repo.get_device(action['management_ip'])
+            # logging.info(pprint.pformat("Node ID: {}".format(action['management_ip'])))
+            if action.get("device_id"):
+                device = self.device_repo.get_device_by_id(action["device_id"])
+            else:
+                device = self.device_repo.get_device_by_mgmt_ip(action["management_ip"])
             # logging.info(device)
             # action_cmd = generate_action_command(device['type'], flow, flow_id, flow_name, action)
             cmd = generate_config_command(device['type'], new_flow, flow_id, flow_name, action)
             # Policy cmd + action cmd
             # device_list[action['management_ip']] = ["\n".join(policy_cmd + action_cmd)]
-            device_list[action['management_ip']] = cmd
+            device_list[device["management_ip"]] = cmd
 
         # Remove old action
         for action in flow.get('actions', []):
-            if device_list.get(action['management_ip']):
+            if device_list.get(device['management_ip']):
                 continue
 
             logging.info(pprint.pformat("Node ID: {}".format(action['management_ip'])))
-            device = self.device_repo.get_device(action['management_ip'])
+            if action.get("device_id"):
+                device = self.device_repo.get_device_by_id(action["device_id"])
+            else:
+                device = self.device_repo.get_device_by_mgmt_ip(action["management_ip"])
             cmd = generate_remove_command(device['type'], flow)
-            device_list[action['management_ip']] = cmd
+            device_list[device['management_ip']] = cmd
 
         # logging.info(pprint.pformat(new_policy['policy']))
         logging.info(pprint.pformat(device_list))
@@ -236,14 +245,16 @@ class PolicyMonitorTask:
     def _remove_flow(self, flow, ssh_connection):
         device_list = {}
         # Remove old action
-        for _, action in flow['actions'].items():
-            if device_list.get(action['management_ip']):
-                continue
+        for action in flow['actions']:
+            # if device_list.get(action['management_ip']):
+            #     continue
 
-            logging.info(pprint.pformat("Node ID: {}".format(action['management_ip'])))
-            device = self.device_repo.get_device(action['management_ip'])
+            if action.get("device_id"):
+                device = self.device_repo.get_device_by_id(action["device_id"])
+            else:
+                device = self.device_repo.get_device_by_mgmt_ip(action["management_ip"])
             cmd = generate_remove_command(device['type'], flow)
-            device_list[action['management_ip']] = cmd
+            device_list[device['management_ip']] = cmd
 
         # Send SSH Command
         connect = ssh_connection.check_connection(device_list.keys())
@@ -255,5 +266,6 @@ class PolicyMonitorTask:
         ssh_connection.send_config_set(device_list)
 
         # Remove flow routing
-
+        self.policy_service.remove_by_id(flow['_id'])
         # Return flow_id
+        self.policy_seq_service.set_not_use_id(flow['flow_id'])

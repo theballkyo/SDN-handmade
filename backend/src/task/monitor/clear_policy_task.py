@@ -31,9 +31,9 @@ class ClearPolicyTask:
 
             if not flow:
                 device_list = {}
-                for action in policy['actions'].values():
-                    device_type = self.device_service.get_device_type(action['management_ip'])
-                    device_list[action['management_ip']] = generate_remove_command(device_type, policy)
+                for action in policy['actions']:
+                    device = self.device_service.get_device_by_id(action['device_id'])
+                    device_list[device['management_ip']] = generate_remove_command(device['type'], policy)
 
                 connect = ssh_connection.check_connection(device_list.keys())
                 if not all(connect):
@@ -89,9 +89,9 @@ class ClearPolicyTask:
 
                 # Todo implement
                 device_list = {}
-                for action in policy['actions'].values():
-                    device_type = self.device_service.get_device_type(action['management_ip'])
-                    device_list[action['management_ip']] = generate_remove_command(device_type, policy)
+                for action in policy['actions']:
+                    device = self.device_service.get_device_by_id(action['device_id'])
+                    device_list[device['management_ip']] = generate_remove_command(device['type'], policy)
                 connect = ssh_connection.check_connection(device_list.keys())
                 if not all(connect):
                     logging.info("Some device can't SSH")

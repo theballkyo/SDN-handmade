@@ -8,35 +8,22 @@ import logging
 
 
 async def process_cdp(host, community, port):
-    cdp_service = repository.get_service('cdp')
-    device_service = repository.get_service('device')
+    device_neighbor_repository = repository.get('device_neighbor')
+    device_repository = repository.get('device')
     cdp = await snmp_async.get_cdp(host, community, port)
 
     if cdp is None:
-        device_service.device.update_one({
-            'management_ip': host
-        }, {
-            '$set': {
-                'cdp_enable': False
-            }
-        })
+        device_repository.set_cdp_by_mgmt_ip(host, False)
     else:
         # Insert CDP
-        cdp_service.cdp.update_one({
-            'management_ip': host
-        }, {
-            '$set': {
-                'management_ip': host,
-                'neighbor': cdp,
-                'updated_at': time.time()
-            }
-        }, upsert=True)
+        device_neighbor_repository.update_neighbor(host, cdp)
+        device_repository.set_cdp_by_mgmt_ip(host, True)
 
     return True
 
 
 async def process_system(host, community, port):
-    device_service = repository.get_service('device')
+    device_repository = repository.get('device')
     system_info = await snmp_async.get_system_info(host, community, port)
 
     interfaces = await snmp_async.get_interfaces(host, community, port)
@@ -45,16 +32,16 @@ async def process_system(host, community, port):
     ip_addrs = await snmp_async.get_ip_addr(host, community, port)
 
     if not system_info:
-        print("SNMP (Process system [sys info]): host {} is down".format(host))
-        return
+        logging.info("SNMP (Process system [sys info]): host {} is down".format(host))
+        return None
 
     if not ip_addrs:
-        print("SNMP (Process system [ip addr]): host {} is down".format(host))
-        return
+        logging.info("SNMP (Process system [ip addr]): host {} is down".format(host))
+        return None
 
     if not interfaces:
-        print("SNMP (Process system [interface]): host {} is down".format(host))
-        return
+        logging.info("SNMP (Process system [interface]): host {} is down".format(host))
+        return None
 
     # Todo optimize this
     for if_index, interface in enumerate(interfaces):
@@ -64,9 +51,7 @@ async def process_system(host, community, port):
                 interface['subnet'] = ip_addr['subnet']
                 break
 
-    my_device = device_service.device.find_one({
-        'management_ip': host
-    })
+    my_device = device_repository.get_device_by_mgmt_ip(host)
 
     diff_interface_update_time = interface_update_time - my_device.get('interfaces_update_time', 0)
     diff_interface_update_time *= 100
@@ -77,14 +62,14 @@ async def process_system(host, community, port):
                     if interface['description'] == my_interface['description']:
                         # In
                         in_octets = interface['in_octets'] - my_interface['in_octets']
-                        in_in_time = system_info['uptime'] - my_device['uptime']
+                        # in_in_time = system_info['uptime'] - my_device['uptime']
                         bw_in_usage_percent = sdn_utils.cal_bw_usage_percent(
                             in_octets,
                             interface['speed'],
                             diff_interface_update_time)
                         # Out
                         out_octets = interface['out_octets'] - my_interface['out_octets']
-                        out_in_time = system_info['uptime'] - my_device['uptime']
+                        # out_in_time = system_info['uptime'] - my_device['uptime']
                         bw_out_usage_percent = sdn_utils.cal_bw_usage_percent(
                             out_octets,
                             interface['speed'],
@@ -121,7 +106,7 @@ async def process_system(host, community, port):
                             interface['end_ip'] = end_ip
                         break
     except Exception as e:
-        logging.debug("Except: %s", e)
+        logging.info("Except: %s", e)
 
     system_info['interfaces'] = interfaces
     system_info['interfaces_update_time'] = interface_update_time
@@ -130,25 +115,17 @@ async def process_system(host, community, port):
     system_info['updated_at'] = time.time()
 
     # Update device info
-    device_service.device.update_one({
-        'management_ip': host
-    }, {
-        '$set': system_info
-    }, upsert=True)
+    device_repository.set(host, system_info)
     return True
 
 
 async def process_route(host, community, port):
-    route_service = repository.get_service('route')
+    copied_route_repository = repository.get('copied_route')
     routes = await snmp_async.get_routes(host, community, port)
 
     if routes is None:
-        print("SNMP (Process route): host {} is down".format(host))
-        return
-    # Clear old routes
-    route_service.route.delete_many({
-        'management_ip': host
-    })
+        logging.info("SNMP (Process route): host {} is down".format(host))
+        return None
 
     for route in routes:
         ip = IPNetwork("{}/{}".format(route['dst'], route['mask']))
@@ -170,6 +147,8 @@ async def process_route(host, community, port):
         # Set update time
         route['updated_at'] = time.time()
 
+    # Clear old routes
+    copied_route_repository.delete_all_by_mgmt_ip(host)
     # Insert net routes
-    route_service.route.insert_many(routes)
+    copied_route_repository.route.insert_many(routes)
     return True

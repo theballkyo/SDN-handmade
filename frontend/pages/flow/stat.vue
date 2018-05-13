@@ -1,11 +1,17 @@
 <template>
   <div class="row">
     <div class="col-12">
+      <p>
+        <button :disabled="isFetching" @click="refresh" class="btn btn-primary">Refresh</button>
+      </p>
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">Flow stat</h3>
         </div>
-        <div class="table-responsive">
+        <div v-if="isFetching" class="text-center card-body">
+          Fetching...
+        </div>
+        <div v-else-if="flows.length > 0" class="table-responsive">
           <table class="table">
             <thead>
               <tr>
@@ -53,6 +59,9 @@
             </tbody>
           </table>
         </div>
+        <div v-else class="text-center card-body">
+          No flow routing to show.
+        </div>
       </div>
     </div>
   </div>
@@ -62,13 +71,28 @@
 export default {
   data() {
     return {
-      flows: []
+      flows: [],
+      isFetching: false
     };
   },
   async mounted() {
-    const fetchData = await this.$axios.$get("flow");
-    // console.log(fetchData)
-    this.flows = fetchData.flows;
+    await this.fetchData();
+  },
+  methods: {
+    async refresh() {
+      if (this.isFetching) {
+        return;
+      }
+      await this.fetchData();
+    },
+    async fetchData() {
+      this.isFetching = true;
+      try {
+        const fetchData = await this.$axios.$get("flow");
+        this.flows = fetchData.flows;
+      } catch (e) {}
+      this.isFetching = false;
+    }
   }
 };
 </script>

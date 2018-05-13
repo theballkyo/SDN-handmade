@@ -121,7 +121,7 @@ export default {
       type: Boolean,
       default: false
     },
-    title: ''
+    title: ""
   },
   watch: {
     device(n, o) {
@@ -130,30 +130,24 @@ export default {
         this.form.type = n.type;
         this.form.ssh_info = n.ssh_info;
         this.form.snmp_info = n.snmp_info;
+        this.form._id = n._id.$oid;
       }
     }
   },
-  async mounted() {},
+  async mounted() {
+    if (this.device) {
+      this.form.management_ip = this.device.management_ip;
+      this.form.type = this.device.type;
+      this.form.ssh_info = this.device.ssh_info;
+      this.form.snmp_info = this.device.snmp_info;
+      this.form._id = this.device._id.$oid;
+    }
+  },
   methods: {
     async onSubmit(n) {
       this.$emit("onSubmit", this.form);
     },
     async onRemoveClick() {
-      // swal({
-      //   title: "Are you sure?",
-      //   text: "You want to remove this device",
-      //   icon: "warning",
-      //   buttons: true,
-      //   dangerMode: true
-      // }).then(willDelete => {
-      //   if (willDelete) {
-      //     swal("Poof! Your imaginary file has been deleted!", {
-      //       icon: "success"
-      //     });
-      //   } else {
-      //     swal("Your imaginary file is safe!");
-      //   }
-      // });
       this.$emit("onRemoveClick", this.form);
     }
   }

@@ -55,6 +55,7 @@ let mixin = {
           if (i !== 32) {
             subnet += "."
           }
+          _subnet = ""
         }
       }
       return subnet

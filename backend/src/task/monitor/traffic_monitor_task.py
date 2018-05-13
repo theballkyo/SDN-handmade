@@ -3,17 +3,18 @@ import logging
 import time
 
 import sdn_utils
-from repository import get_service, PolicyRoute
+from repository import get, PolicyRoute
 from tools import PathFinder
+from worker.ssh.ssh_worker import SSHConnection
 
 
 class TrafficMonitorTask:
     def __init__(self):
-        self.device_service = get_service('device')
-        self.netflow_service = get_service('netflow')
-        self.route_service = get_service('route')
-        self.link_service = get_service('link')
-        self.policy_service = get_service('policy')
+        self.device_repository = get('device')
+        self.flow_stat_repository = get('flow_stat')
+        self.copied_route_repository = get('copied_route')
+        self.link_utilization_repository = get('link_utilization')
+        self.flow_routing_repository = get('flow_routing')
         self.last_run = 0
         self.delay = 1
         self.path_finder = PathFinder(auto_update_graph=False)
@@ -33,7 +34,7 @@ class TrafficMonitorTask:
             return True
         return False
 
-    def run(self, ssh_connection=None):
+    def run(self, ssh_connection: SSHConnection = None):
         if not self.check_before_run():
             return
 
@@ -45,7 +46,7 @@ class TrafficMonitorTask:
         datetime_now = datetime.datetime.now()
 
         # Step 1 Find link is high utilization
-        devices = self.device_service.get_by_if_utilization(self.utilize, 'in')
+        devices = self.device_repository.get_by_if_utilization(self.utilize, 'in')
 
         for device in devices:
             for interface in device['interfaces']:
@@ -58,7 +59,7 @@ class TrafficMonitorTask:
 
                 # Getting flow routing is apply or in pending
                 # Todo Change query to new calculation
-                in_policies = self.policy_service.policy.find({
+                in_policies = self.flow_routing_repository.model.find({
                     # "$or": [
                     #     {
                     #         "info.old_path": device['management_ip']
@@ -110,7 +111,7 @@ class TrafficMonitorTask:
                     })
 
                 # Todo support port, protocol
-                flows = self.netflow_service.summary_flow_v2(
+                flows = self.flow_stat_repository.summary_flow_v2(
                     device['management_ip'],
                     not_in=not_in  # Exclude flow is already change route
                 )
@@ -130,8 +131,8 @@ class TrafficMonitorTask:
 
                     # TODO Check in policy route
 
-                    flow_src_node_ips = self.route_service.get_management_ip_from_host_ip(src_flow)
-                    flow_dst_node_ips = self.route_service.get_management_ip_from_host_ip(dst_flow)
+                    flow_src_node_ips = self.copied_route_repository.get_management_ip_from_host_ip(src_flow)
+                    flow_dst_node_ips = self.copied_route_repository.get_management_ip_from_host_ip(dst_flow)
 
                     # Getting all active path
                     self.active_paths = []
@@ -186,7 +187,9 @@ class TrafficMonitorTask:
                             'out': new_path['path_link'][hop_index]['out']['ipv4_address'],
                             'in': new_path['path_link'][hop_index]['in']['ipv4_address']
                         })
+                        action_device = self.device_repository.get_device_by_mgmt_ip(new_path['path'][hop_index])
                         policy_route.add_action(
+                            action_device['_id'],
                             new_path['path'][hop_index],  # Node IP
                             PolicyRoute.ACTION_NEXT_HOP_IP,  # Action
                             new_path['path_link'][hop_index]['in']['ipv4_address']  # Data
@@ -204,12 +207,13 @@ class TrafficMonitorTask:
                     policy_route.info['in_pkts'] = flow['in_pkts']
                     policy_route.info['submit_from'] = {
                         'type': PolicyRoute.TYPE_AUTOMATE,
-                        'device_ip': device['management_ip']
+                        'device_ip': device['management_ip'],
+                        'device_id': device['_id']
                     }
                     policy_route.info['status'] = PolicyRoute.STATUS_WAIT_APPLY
 
                     policy = policy_route.get_policy()
-                    self.policy_service.add_or_update_flow_routing(policy)
+                    self.flow_routing_repository.add_or_update_flow_routing(policy)
                     return
 
         self.last_run = time.time()
@@ -300,7 +304,7 @@ class TrafficMonitorTask:
     def find_neighbor_link(self, src_node_ip, src_ip, dst_ip):
         logging.debug("Find neighbor: %s %s %s", src_node_ip, src_ip, dst_ip)
         # Find interfaces than receive this flow
-        flow_from = self.netflow_service.netflow.aggregate([{
+        flow_from = self.flow_stat_repository.model.aggregate([{
             '$match': {
                 'ipv4_src_addr': src_ip,
                 'ipv4_dst_addr': dst_ip,
@@ -330,7 +334,7 @@ class TrafficMonitorTask:
             # src_if_ip = self.device_service.get_if_ip_by_if_index(src_node_ip, src_if_index)
             # my_links = self.link_service.find_by_if_ip(src_if_ip)
             # Find links than connected
-            my_links = self.link_service.find_by_if_index(src_node_ip, src_if_index)
+            my_links = self.link_utilization_repository.find_by_if_index(src_node_ip, src_if_index)
             # Loop all links
             for link in my_links:
                 # logging.debug(link)

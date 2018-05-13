@@ -1,6 +1,6 @@
 import datetime
 
-from repository import get_service
+from repository import get
 from worker.ssh.ssh_worker import SSHConnection
 
 
@@ -10,10 +10,10 @@ class ClearInactiveFlowTask:
         # self.low_utilize = 60
         # self.normal_utilize = 70
         # self.high_utilize = 80
-        self.device_service = get_service('device')
-        self.policy_service = get_service('policy')
-        self.policy_seq_service = get_service('policy_seq')
-        self.netflow_service = get_service('netflow')
+        # self.device_service = get('device')
+        # self.policy_service = get('policy')
+        # self.policy_seq_service = get('policy_seq')
+        self.flow_stat_repository = get('flow_stat')
 
     def run(self, ssh_connection: SSHConnection):
         """
@@ -26,5 +26,5 @@ class ClearInactiveFlowTask:
         """
         # later_time = datetime.datetime.utcnow() - datetime.timedelta(seconds=self.inactive_time)
         later_time = datetime.datetime.now() - datetime.timedelta(seconds=self.inactive_time)
-        self.netflow_service.netflow.delete_many({'created_at': {'$lte': later_time}})
+        self.flow_stat_repository.delete_many(filter={'created_at': {'$lte': later_time}})
         return True

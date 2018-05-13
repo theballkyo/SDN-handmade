@@ -17,10 +17,10 @@ def main():
     cpt = ClearPolicyTask()
     cdt = ClearDeviceTask()
 
-    # tmt.run(None)
+    tmt.run(None)
     # pmt.run(ssh_connection)
     # cpt.run(ssh_connection)
-    cdt.run(ssh_connection)
+    # cdt.run(ssh_connection)
 
 
 if __name__ == '__main__':

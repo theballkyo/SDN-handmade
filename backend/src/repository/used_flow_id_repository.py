@@ -1,10 +1,11 @@
-from repository import BaseService
+from repository.repository import Repository
 
 
-class PolicySeqService(BaseService):
+class UsedFlowIdRepository(Repository):
     def __init__(self):
-        super(PolicySeqService, self).__init__()
-        self.seq = self.db.flow_seq
+        super(UsedFlowIdRepository, self).__init__()
+        self.seq = self.db.used_flow_id
+        self.model = self.db.used_flow_id
 
     def get_new_id(self):
         seq = self.seq.find_one({'in_use': False}, {'_id': 1})

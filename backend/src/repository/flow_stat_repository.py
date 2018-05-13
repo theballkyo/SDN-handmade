@@ -1,16 +1,17 @@
-from repository import BaseService
 import logging
-import pprint
+
+from repository.repository import Repository
 
 
-class NetflowService(BaseService):
+class FlowStatRepository(Repository):
     def __init__(self, *args, **kwargs):
-        super(NetflowService, self).__init__(*args, **kwargs)
-        self.netflow = self.db.netflow
+        super(FlowStatRepository, self).__init__(*args, **kwargs)
+        self.netflow = self.db.flow_stat  # Todo Deprecated in next version
+        self.model = self.db.flow_stat  # Use this
 
     def insert_many(self, data):
         # pprint.pprint(data)
-        self.netflow.insert_many(data)
+        self.model.insert_many(data)
 
     def get_ingress_flow(self, start_time, end_time, limit=10, skip=0, addition_match=None, group_by=(),
                          sort=None, side='ingress'):
@@ -92,7 +93,7 @@ class NetflowService(BaseService):
                     {'$limit': limit}, {'$group': count_flow}]
 
         logging.debug(pipeline)
-        flows = self.netflow.aggregate(pipeline)
+        flows = self.model.aggregate(pipeline)
         return flows
 
     def summary_flow(self, from_ip, start_datetime, direction=0):
@@ -199,7 +200,7 @@ class NetflowService(BaseService):
             'total_in_bytes': -1
         }
 
-        return self.netflow.aggregate([
+        return self.model.aggregate([
             {'$match': match_1}, {'$project': project_1}, {'$match': match_2}, {'$group': group}, {'$sort': sort}
         ])
 
@@ -224,7 +225,7 @@ class NetflowService(BaseService):
             # ]
             match['$and'] = not_in
 
-        return self.netflow.aggregate([
+        return self.model.aggregate([
             {'$match': match},
             {'$group': {
                 '_id': {  # Currently ignore port, proto
@@ -262,7 +263,7 @@ class NetflowService(BaseService):
         ])
 
     def get_flows(self, sort_by='in_bytes', limit=1):
-        return self.netflow.find().sort({sort_by: -1}).limit(limit)
+        return self.model.find().sort({sort_by: -1}).limit(limit)
 
     def update_flows(self, flows):
         not_keys = ('first_switched', 'last_switched', 'in_bytes', 'in_pkts', 'out_bytes', 'out_pkts', 'created_at')
@@ -274,7 +275,7 @@ class NetflowService(BaseService):
                 except KeyError:
                     pass
 
-            self.netflow.update_one(
+            self.model.update_one(
                 _flow,
                 # {
                 #     'ipv4_src_addr': flow['ipv4_src_addr'],
@@ -300,10 +301,10 @@ class NetflowService(BaseService):
                 }, upsert=True)
 
     def is_flow_exist_by_ip(self, src_ip, dst_ip):
-        return self.netflow.find_one({
+        return self.model.find_one({
             'ipv4_src_addr': src_ip,
             'ipv4_dst_addr': dst_ip
         })
 
-    def get_all(self):
-        return self.netflow.find().sort("from_ip", 1)
+    def get_all(self, **kwargs):
+        return self.model.find(**kwargs).sort("from_ip", 1)

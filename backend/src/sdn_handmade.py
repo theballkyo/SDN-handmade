@@ -4,23 +4,18 @@ import logging
 import threading
 import time
 
-from netmiko import ConnectHandler
-from netmiko.ssh_exception import NetMikoTimeoutException
-
-import sdn_utils
-import services
+import repository
 from database import get_mongodb
 from device import Device
+from task.monitor.clear_device_task import ClearDeviceTask
+from task.monitor.clear_inactive_flow_task import ClearInactiveFlowTask
+from task.monitor.clear_policy_task import ClearPolicyTask
+from task.monitor.policy_monitor_task import PolicyMonitorTask
+from task.monitor.traffic_monitor_task import TrafficMonitorTask
 # from netflow import NetflowWorker
 from task.snmp_fetch import SNMPFetch
 from worker.netflow.netflow_worker import NetflowWorker
-from snmp.snmp_worker import SNMPWorker
 from worker.ssh.ssh_worker import SSHWorker
-from task.monitor.clear_policy_task import ClearPolicyTask
-from task.monitor.clear_inactive_flow_task import ClearInactiveFlowTask
-from task.monitor.policy_monitor_task import PolicyMonitorTask
-from task.monitor.traffic_monitor_task import TrafficMonitorTask
-from task.monitor.clear_device_task import ClearDeviceTask
 
 
 # class Router(Device):
@@ -148,17 +143,20 @@ class Topology:
     """ Topology class
     """
 
-    accept_device = (
-        ('cisco_ios', CiscoRouter),
-    )
+    # accept_device = (
+    #     ('cisco_ios', CiscoRouter),
+    # )
 
     def __init__(self, netflow_ip='127.0.0.1', netflow_port=23456):
         self.__create_time = time.time()
         self.devices = []
         self.subnets = []
-        self.app_service = services.AppService()
 
         # self._snmp_worker = SNMPWorker()
+
+        self.app_repository = repository.get("app")
+        self.device_repository = repository.get("device")
+        self.used_flow_id = repository.get("used_flow_id")
 
         self._netflow_worker = NetflowWorker(
             netflow_ip,
@@ -179,7 +177,6 @@ class Topology:
 
         self.init()
 
-        self.device_service = services.DeviceService()
         logging.info("Create topology")
 
     def init(self):
@@ -190,7 +187,7 @@ class Topology:
                 UpdateOne({'_id': i}, {'$setOnInsert': {'in_use': False}}, upsert=True)
             )
         try:
-            self.mongo.flow_seq.bulk_write(op)
+            self.used_flow_id.model.bulk_write(op)
         except Exception as e:
             logging.error(e)
 
@@ -200,25 +197,26 @@ class Topology:
         # if not self.app_service.is_running():
 
         # Resetting SNMP status
-        devices = self.device_service.get_all()
+        devices = self.device_repository.get_all()
         for device in devices:
-            self.device_service.set_snmp_running(device['management_ip'], False)
+            self.device_repository.set_snmp_running(device['management_ip'], False)
 
         self._netflow_worker.start()
         # threading.Thread(target=self._snmp_worker.run).start()
         self._ssh_worker_t = threading.Thread(target=self._ssh_worker.start)
         self._ssh_worker_t.name = "SSH-WORKER"
         self._ssh_worker_t.start()
-        self.app_service.set_running(True)
+        self.app_repository.set_running(True)
 
     def shutdown(self):
         """ Shutdown topology
         """
-        self.app_service.set_running(False)
+        self.app_repository.set_running(False)
 
         # self._snmp_worker.shutdown()
 
         self._netflow_worker.shutdown()
+        time.sleep(1)
         self._netflow_worker.join()
         self._ssh_worker.stop()
 

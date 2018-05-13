@@ -1,3 +1,4 @@
+import repository
 from cli.sdn_cmd import SDNCommand
 import logging
 import ipaddress
@@ -6,6 +7,7 @@ import services
 from repository import get_service
 # from services.device_service import DeviceService
 from sdn_handmade import Device
+
 
 class AddDeviceCommand():
     def __init__(self, topology, logbug):
@@ -135,6 +137,7 @@ class AddDeviceCommand():
             self.logbug.prompt = ''
         except KeyboardInterrupt:
             print("Interrupt add device.")
+
 
 class FlowCommand(SDNCommand):
 
@@ -346,7 +349,7 @@ class FlowCommand(SDNCommand):
                             return
 
         except (IndexError, ValueError):
-                print('Incorrect command')
+            print('Incorrect command')
 
     def do_apply(self, args):
         if len(self.flow['action_pending']) < 1 and self.flow['is_pending'] == False:
@@ -368,10 +371,10 @@ class FlowCommand(SDNCommand):
                 if action_pending['device_ip'] == action['device_ip']:
                     in_action = True
                     if action_pending['rule'] == 'remove':
-                        del self.flow['action'][i2-del_count]
+                        del self.flow['action'][i2 - del_count]
                         del_count += 1
                     else:
-                        self.flow['action'][i2-del_count] = action_pending
+                        self.flow['action'][i2 - del_count] = action_pending
                     break
             if not in_action:
                 self.flow['action'].append(action_pending)
@@ -466,6 +469,7 @@ class FlowCommand(SDNCommand):
             ))
         print('')
 
+
 class ConfigCommand(SDNCommand):
     _AVAILABLE_ADD = ('device',)
 
@@ -475,7 +479,7 @@ class ConfigCommand(SDNCommand):
         self.logbug = logbug
         self.prompt = 'SDN Handmade (0.0.1)(config)# '
         self.add_device = AddDeviceCommand(topology, logbug)
-        self.device_service = services.DeviceService()
+        self.device_repository = repository.get("device")
 
     def do_remove(self, args):
         args = args.split(' ')
@@ -488,14 +492,14 @@ class ConfigCommand(SDNCommand):
                     if ip.version != 4:
                         print("Device IP must be IPv4")
                         return
-                    self.device_service.remove(args[1])
+                    self.device_repository.remove(args[1])
                     # if self.topology.remove_device(args[1]):
                     print("Removed device IP {}".format(args[1]))
                     # else:
                     #     print('Can\'t find device IP {}'.format(args[1]))
                 except ValueError:
                     print("Device IP format not correct")
-    
+
     def complete_remove(self, text, line, begidx, endidx):
         return ['device']
 

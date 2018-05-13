@@ -1,33 +1,30 @@
-from repository.app_service import AppService
-from repository.base_service import BaseService
-from repository.cdp_service import CdpService
-from repository.device_service import DeviceService
-from repository.link_service import LinkService
-from repository.netflow_service import NetflowService
-from repository.policy_log_service import PolicyLogService
-from repository.policy_seq_service import PolicySeqService
-from repository.policy_service import PolicyRoute, PolicyService
-from repository.route_service import RouteService
-from repository.topology_path_service import TopologyPathService
-from repository.topology_service import TopologyService
-
+import logging
 import os
+from typing import Union, Dict
+
+from repository.app_repository import AppRepository
+from repository.device_neighbor_repository import DeviceNeighborRepository
+from repository.device_repository import DeviceRepository
+from repository.flow_stat_repository import FlowStatRepository
+from repository.link_utilization_repository import LinkUtilizationRepository
+from repository.used_flow_id_repository import UsedFlowIdRepository
+from repository.flow_routing_repository import PolicyRoute, FlowRoutingRepository
+from repository.repository import Repository
+from repository.copied_route_repository import CopiedRouteRepository
 
 _services = {}
 
 _list_service = {
-    'app_service': AppService,
-    'cdp_service': CdpService,
-    'device_neighbor_service': CdpService,
-    'device_service': DeviceService,
-    'link_service': LinkService,
-    'netflow_service': NetflowService,
-    'policy_log_service': PolicyLogService,
-    'policy_seq_service': PolicySeqService,
-    'policy_service': PolicyService,
-    'route_service': RouteService,
-    'topology_path_service': TopologyPathService,
-    'topology_service': TopologyService
+    'app_service': AppRepository,
+    'cdp_service': DeviceNeighborRepository,
+    'device_neighbor_service': DeviceNeighborRepository,
+    'device_service': DeviceRepository,
+    'link_service': LinkUtilizationRepository,
+    'netflow_service': FlowStatRepository,
+    'flow_stat': FlowStatRepository,  # Changed from netflow
+    'policy_seq_service': UsedFlowIdRepository,
+    'policy_service': FlowRoutingRepository,
+    'route_service': CopiedRouteRepository,
 }
 
 _current_pid = None
@@ -46,11 +43,11 @@ def get_all_service(remove_suffix=True):
     return services
 
 
-def get_service(name):
+def get_service(name, suffix="_service"):
     global _services
 
-    if not name.endswith('_service'):
-        name += '_service'
+    if not name.endswith(suffix):
+        name += suffix
 
     if name not in _list_service.keys():
         raise ValueError("No repository name %s", name)
@@ -63,8 +60,73 @@ def get_service(name):
 def get_flow_table_service():
     global _services
     if _services.get('flow_table') is None:
-        _services['flow_table'] = PolicyService()
+        _services['flow_table'] = FlowRoutingRepository()
     return _services['flow_table']
 
 
-__all__ = ["BaseService", "PolicyRoute", "get_service", "get_all_service", "get_flow_table_service"]
+def get_flow_stat_repository():
+    return FlowStatRepository()
+
+
+# Todo cache instance for lower memory usage !
+_cache: Dict[str, Union[AppRepository,
+                        CopiedRouteRepository,
+                        DeviceRepository,
+                        DeviceNeighborRepository,
+                        FlowRoutingRepository,
+                        FlowStatRepository,
+                        LinkUtilizationRepository,
+                        UsedFlowIdRepository]] = {
+}
+
+_list = {
+    "app": AppRepository,
+    "copied_route": CopiedRouteRepository,
+    "device": DeviceRepository,
+    "device_neighbor": DeviceNeighborRepository,
+    "flow_routing": FlowRoutingRepository,
+    "flow_stat": FlowStatRepository,
+    "link_utilization": LinkUtilizationRepository,
+    "used_flow_id": UsedFlowIdRepository
+}
+
+_pid = os.getpid()
+
+
+def get(name):
+    global _pid, _cache
+    if _pid != os.getpid():
+        logging.info(str(os.getpid()) + ":" + str(_pid) + " -> (Get) " + name)
+        _cache = {}
+        _pid = os.getpid()
+    repo = _cache.get(name)
+    if repo is None:
+        if _list.get(name):
+            _cache[name] = _list[name]()
+            repo = _cache[name]
+        else:
+            return None
+    # else:
+    # logging.info(str(os.getpid()) + " -> " + str(_cache))
+    return repo
+
+
+def get_all():
+    for repo, _ in _list.items():
+        get(repo)
+    return _cache
+
+
+__all__ = [
+    "PolicyRoute",
+    "Repository",
+    "get",
+    "get_all",
+    "AppRepository",
+    "CopiedRouteRepository",
+    "DeviceRepository",
+    "DeviceNeighborRepository",
+    "FlowRoutingRepository",
+    "FlowStatRepository",
+    "LinkUtilizationRepository",
+    "UsedFlowIdRepository"]

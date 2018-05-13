@@ -54,7 +54,7 @@ class ClearDeviceTask:
 
     def remove_flow_stat(self, device_ip):
         logging.info("Removed flow stat")
-        self.flow_stat_repo.netflow.remove({
+        self.flow_stat_repo.model.remove({
             "from_ip": device_ip
         })
 

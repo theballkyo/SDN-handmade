@@ -29,10 +29,19 @@ export default {
   },
   methods: {
     async onSubmit(form) {
+      form.actions = form.actions.map(action => {
+        if (action.action === 4) {
+          action.action = 2;
+        } else if (action.action === 5) {
+          action.action = 3;
+        }
+        return action;
+      });
+      console.log(form);
       const res = await this.$axios.$post("flow/routing", form);
       if (res.success) {
         await swal("Successful", "Added static flow routing.", "success");
-        // Todo redirect
+        this.$router.replace("/flow/routing");
       } else {
         swal("Fail !", res.message, "error");
       }

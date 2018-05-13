@@ -1,5 +1,3 @@
-import logging
-
 import netaddr
 
 from repository import PolicyRoute
@@ -19,7 +17,7 @@ def _generate_match(ip, wildcard, port):
     src_ip = netaddr.IPAddress(ip)
     src_wildcard = netaddr.IPAddress(wildcard)
 
-    if not src_wildcard.is_hostmask() or not src_wildcard.is_netmask():
+    if (not src_wildcard.is_hostmask()) and (not src_wildcard.is_netmask()):
         raise ValueError("Wildcard: %s format error", str(src_wildcard))
 
     if str(src_ip) == '0.0.0.0' and str(src_wildcard) == '255.255.255.255':
@@ -35,8 +33,9 @@ def _generate_match(ip, wildcard, port):
         elif port.find("-") >= 0:
             start_port, end_port = port.split('-')
             acl_cmd += " range {} {}".format(start_port, end_port)
-    elif isinstance(port, int):
-        acl_cmd += " eq {}".format(str(port))
+
+        elif port.isdigit():
+            acl_cmd += " eq {}".format(port)
 
     return acl_cmd
 

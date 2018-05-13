@@ -1,11 +1,17 @@
 <template>
   <div class="row">
     <div class="col-12">
+      <p>
+        <button :disabled="isFetching" @click="refresh" class="btn btn-primary">Refresh</button>
+      </p>
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">Flow routing</h3>
         </div>
-        <div class="table-responsive">
+        <div v-if="isFetching" class="text-center card-body">
+          Fetching...
+        </div>
+        <div v-else-if="flows.length > 0" class="table-responsive">
           <table class="table">
             <thead>
               <tr>
@@ -48,70 +54,13 @@
                 </td>
                 <td>
                   <router-link :to="'/flow/routing/' + flow._id.$oid" v-if="flow.info.submit_from.type === 1" class="btn btn-info">Edit</router-link>
-                  <hr/>
-                  <button v-if="flow.info.submit_from.type === 1" @click="onRemoveClick(flow.id)" class="btn btn-danger">Remove</button>
-                </td>
-              </tr>
-
-              <tr>
-                <th scope="row">1</th>
-                <td>Static</td>
-                <td>{{ cidrToWildcard(24) }}</td>
-                <td>172.16.31.100:80</td>
-                <td>
-                  <table class="table">
-                    <thead>
-                      <tr>
-                        <th>Device</th>
-                        <th>Action</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>192.168.1.1</td>
-                        <td>Drop</td>
-                        <td></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </td>
-                <td>
-                  <button class="btn btn-danger">Remove</button>
-                </td>
-              </tr>
-
-              <tr>
-                <th scope="row">2</th>
-                <td>Automate</td>
-                <td>172.16.0.100</td>
-                <td>172.16.31.100</td>
-                <td>
-                  <table class="table">
-                    <thead>
-                      <tr>
-                        <th>Device</th>
-                        <th>Action</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>192.168.1.1</td>
-                        <td>Next-hop IP</td>
-                        <td>192.168.1.2</td>
-                      </tr>
-                      <tr>
-                        <td>192.168.1.2</td>
-                        <td>Next-hop IP</td>
-                        <td>192.168.1.6</td>
-                      </tr>
-                    </tbody>
-                  </table>
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
+        <div v-else class="text-center card-body">
+          No flow routing to show.
         </div>
       </div>
     </div>
@@ -140,7 +89,8 @@ export default {
   data() {
     return {
       flows: [],
-      showCidr: true
+      showCidr: true,
+      isFetching: false
     };
   },
   mixins: [ipaddrMixin],
@@ -148,9 +98,19 @@ export default {
     await this.fetchData();
   },
   methods: {
+    async refresh() {
+      if (this.isFetching) {
+        return;
+      }
+      await this.fetchData();
+    },
     async fetchData() {
-      const fetchData = await this.$axios.$get("flow/routing");
-      this.flows = fetchData.flows;
+      this.isFetching = true;
+      try {
+        const fetchData = await this.$axios.$get("flow/routing");
+        this.flows = fetchData.flows;
+      } catch (e) {}
+      this.isFetching = false;
     },
     getActionName(id) {
       return ACTIONS[id];

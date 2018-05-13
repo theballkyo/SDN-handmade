@@ -1,16 +1,23 @@
 import time
 
-from repository import BaseService
-from bson.objectid import ObjectId
+from bson.objectid import ObjectId, InvalidId
+
+from repository.repository import Repository
 
 
-class DeviceService(BaseService):
+class DeviceRepository(Repository):
     """ Device repository
     """
 
+    STATUS_ACTIVE = 1
+
+    STATUS_WAIT_REMOVE = -1
+    STATUS_WAIT_UPDATE = 2
+
     def __init__(self, *args, **kwargs):
-        super(DeviceService, self).__init__(*args, **kwargs)
-        self.device = self.db.device
+        super(DeviceRepository, self).__init__(*args, **kwargs)
+        self.device = self.db.device  # Todo Deprecated
+        self.model = self.db.device
 
     @staticmethod
     def project_simple():
@@ -22,22 +29,25 @@ class DeviceService(BaseService):
             'interfaces': 1
         }
 
-    def get_device(self, management_ip):
+    def get_device_by_mgmt_ip(self, management_ip):
         """ Get device object """
-        return self.device.find_one({'management_ip': management_ip})
+        return self.model.find_one({'management_ip': management_ip})
+
+    def get_device_by_id(self, _id):
+        return self.model.find_one({'_id': ObjectId(_id)})
 
     def get_by_id(self, _id):
-        return self.device.find_one({'_id': ObjectId(_id)})
+        return self.model.find_one({'_id': ObjectId(_id)})
 
     def get_active(self):
         """ Get devices is active """
-        return self.device.find({'active': True})
+        return self.model.find({'active': True})
 
     def get_all(self):
-        return self.device.find()
+        return self.model.find()
 
     def get_by_snmp_can_run(self, delay):
-        return self.device.find({
+        return self.model.find({
             'snmp_is_running': False,
             'snmp_last_run_time': {
                 '$lte': time.time() - delay
@@ -45,7 +55,7 @@ class DeviceService(BaseService):
         })
 
     def set_snmp_running(self, management_ip, is_running):
-        self.device.update_one({
+        self.model.update_one({
             'management_ip': management_ip
         }, {
             '$set': {
@@ -54,7 +64,7 @@ class DeviceService(BaseService):
         })
 
     def set_snmp_finish_running(self, management_ip):
-        self.device.update_one({
+        self.model.update_one({
             'management_ip': management_ip
         }, {
             '$set': {
@@ -63,8 +73,65 @@ class DeviceService(BaseService):
             }
         })
 
+    def set_cdp_by_mgmt_ip(self, management_ip: str, is_enable: bool):
+        return self.model.update_one({
+            'management_ip': management_ip
+        }, {
+            '$set': {
+                'cdp_enable': is_enable
+            }
+        })
+
+    def set_status_wait_remove(self, device_id: str):
+        try:
+            device_id = ObjectId(device_id)
+        except InvalidId:
+            return False
+
+        return self.model.update_one({
+            "_id": device_id
+        }, {"$set": {
+            "status": DeviceRepository.STATUS_WAIT_REMOVE
+        }})
+
+    def set_information(self, device_id: str, information: dict):
+        try:
+            device_id = ObjectId(device_id)
+        except InvalidId:
+            return False
+
+        return self.model.update_one({
+            "_id": device_id
+        }, {"$set": {
+            "ssh_info": information["ssh_info"],
+            "snmp_info": information["snmp_info"],
+            "type": information["type"],
+            "status": DeviceRepository.STATUS_WAIT_UPDATE
+        }})
+
+    def set_ssh_is_connect_by_mgmt_ip(self, management_ip: str, is_connect: bool):
+        self.model.update_one({
+            "management_ip": management_ip
+        }, {"$set": {
+            "is_ssh_connect": is_connect
+        }})
+
+    def set_snmp_is_connect_by_mgmt_ip(self, management_ip: str, is_connect: bool):
+        self.model.update_one({
+            "management_ip": management_ip
+        }, {"$set": {
+            "is_snmp_connect": is_connect
+        }})
+
+    def set(self, management_ip: str, system_info: dict):
+        return self.model.update_one({
+            'management_ip': management_ip
+        }, {
+            '$set': system_info
+        }, upsert=True)
+
     def snmp_is_running(self, management_ip):
-        device = self.device.find_one({
+        device = self.model.find_one({
             'management_ip': management_ip
         })
         if device is None:
@@ -86,16 +153,16 @@ class DeviceService(BaseService):
         """
         """
         if project is None:
-            return self.device.find_one({
+            return self.model.find_one({
                 'interfaces.ipv4_address': ip
             })
-        return self.device.find_one({
+        return self.model.find_one({
             'interfaces.ipv4_address': ip
         }, project)
 
     def get_if_ip_by_if_index(self, management_ip, index):
 
-        query = self.device.aggregate([
+        query = self.model.aggregate([
             {'$unwind': 'interfaces'},
             {'$match': {'management_ip': management_ip, 'interfaces.index': index}},
             {'$project': {'interfaces.ipv4_address': 1}}
@@ -106,7 +173,7 @@ class DeviceService(BaseService):
 
     def get_interface_by_ip(self, interface_ip):
 
-        query = self.device.find_one({
+        query = self.model.find_one({
             'interfaces.ipv4_address': interface_ip
         }, {
             'management_ip': 1,
@@ -139,7 +206,7 @@ class DeviceService(BaseService):
         device['snmp_is_running'] = False
         device['snmp_last_run_time'] = 0
 
-        self.device.update_one({
+        self.model.update_one({
             'management_ip': device.get('management_ip'),
         }, {
             '$set': device
@@ -148,7 +215,7 @@ class DeviceService(BaseService):
     def increase_offline_count(self, management_ip):
         """ Update offline count by increase by 1
         """
-        self.device.update_one({
+        self.model.update_one({
             'management_ip': management_ip
         }, {
             '$inc': {
@@ -158,7 +225,7 @@ class DeviceService(BaseService):
 
     def remove(self, management_ip):
         """ Remove device """
-        self.device.remove({'management_ip': management_ip})
+        self.model.remove({'management_ip': management_ip})
 
     def get_by_if_utilization(self, percent, side='in', cond='$gte'):
         if side == 'in':
@@ -168,7 +235,7 @@ class DeviceService(BaseService):
         else:
             raise ValueError('side can be only in or out')
 
-        return self.device.find({
+        return self.model.find({
             'interfaces.' + key_name: {
                 cond: percent
             }
@@ -180,8 +247,15 @@ class DeviceService(BaseService):
         }).sort([('interfaces.' + key_name, -1)])
 
     def get_device_type(self, management_ip):
-        device = self.device.find_one({
+        device = self.model.find_one({
             'management_ip': management_ip
+        }, {'type': 1})
+
+        return device['type']
+
+    def get_device_type_by_id(self, _id):
+        device = self.model.find_one({
+            "_id": ObjectId(_id)
         }, {'type': 1})
 
         return device['type']

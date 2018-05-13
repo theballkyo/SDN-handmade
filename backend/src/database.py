@@ -16,7 +16,7 @@ _connections = {}
 
 
 def get_mongodb(alias=None):
-    global _connections
+    # global _connections
     if not alias:
         alias = DEFAULT_CONNECTION_NAME
     alias_original = alias

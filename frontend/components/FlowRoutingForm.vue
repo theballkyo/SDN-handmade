@@ -125,8 +125,11 @@
           <!-- <div class="form-label">SNMP information</div> -->
 
           <div class="row">
-            <div class="col-md-12">
+            <div class="col-md-6">
               <button type="submit" class="btn btn-primary">Add static flow routing</button>
+            </div>
+            <div class="col-md-6 text-right">
+              <button v-if="showRemove" @click="onRemoveClick" type="button" class="btn btn-danger">Remove</button>
             </div>
           </div>
         </div>
@@ -160,8 +163,34 @@ export default {
       },
       devices: [],
       nextHopIP_: {},
-      isFetching: false
+      isFetching: false,
+      flowId: null
     };
+  },
+  props: {
+    propForm: {
+      default() {
+        return {
+          name: "",
+          src_ip: "",
+          src_subnet: "",
+          src_port: "",
+          dst_ip: "",
+          dst_subnet: "",
+          dst_port: "",
+          actions: [
+            {
+              device_id: "0",
+              action: 0,
+              data: ""
+            }
+          ]
+        };
+      }
+    },
+    showRemove: {
+      default: false
+    }
   },
   mixins: [ipaddrMixin],
   async mounted() {
@@ -171,6 +200,10 @@ export default {
         this.devices = res.devices;
       }
     } catch (e) {}
+    this.form = {
+      ...this.propForm
+    };
+    console.log(this.form);
   },
   methods: {
     async onSubmit(n) {
@@ -183,15 +216,23 @@ export default {
       };
       this.$emit("onSubmit", form);
     },
+    onRemoveClick() {
+      this.$emit("onRemove", this.flowId);
+    },
     async onActionChange(i) {
       const action = this.form.actions[i];
       const sel = action.action;
+      // action.data = "";
       // console.log(sel)
       if (sel == 2) {
         this.isFetching = true;
         // Cache
-        if (this.nextHopIP_[action.device_id] || action.device_id == '0') {
+        if (this.nextHopIP_[action.device_id] || action.device_id == "0") {
           this.isFetching = false;
+          return;
+        }
+        if (!action.device_id) {
+          console.log("Found undefind", action);
           return;
         }
         try {
@@ -241,10 +282,45 @@ export default {
         default:
           return "";
       }
+    },
+    sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
     }
   },
   watch: {
-    // Todo watch form
+    async propForm(n, o) {
+      this.flowId = n.flow_id;
+      this.form = {
+        ...n
+      };
+      await this.sleep(100);
+      for (let i = 0; i < n.actions.length; i++) {
+        // console.log(n.actions[i]);
+        await this.onActionChange(i);
+        if (n.actions[i].action === 2) {
+          // console.log();
+          if (
+            !this.nextHopIP_[n.actions[i].device_id].find(
+              v => v.ip_addr === n.actions[i].data
+            )
+          ) {
+            n.actions[i].action = 4;
+          }
+        } else if (n.actions[i].action === 3) {
+          if (
+            !this.getDeviceIfByID(n.actions[i].device_id).find(
+              v => v.description === n.actions[i].data
+            )
+          ) {
+            n.actions[i].action = 5;
+          }
+        }
+      }
+
+      this.form = {
+        ...n
+      };
+    }
   }
 };
 </script>

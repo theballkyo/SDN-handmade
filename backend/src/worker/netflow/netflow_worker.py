@@ -22,7 +22,7 @@ class NetflowWorker(threading.Thread):
         self.stop_flag = False
         self.device = []
         self.daemon = False
-        self.netflow_service = repository.get_service('netflow')
+        self.flow_stat_repository = repository.FlowStatRepository()
         # Setting thread name
         self.name = 'netflow-sv'
 
@@ -51,7 +51,7 @@ class NetflowWorker(threading.Thread):
 
                 flows = []
                 created_at = sdn_utils.datetime_now()
-                packet_datetime = datetime.fromtimestamp(export.header.timestamp)
+                packet_datetime = datetime.utcfromtimestamp(export.header.timestamp)
                 for flow in export.flows:
                     # Check flow is active or inactive
                     # It updated only is flow is active
@@ -72,7 +72,7 @@ class NetflowWorker(threading.Thread):
 
                 # logging.info("Flow: {}, {}".format(len(export.flows), len(flows)))
 
-                self.netflow_service.update_flows(flows)
+                self.flow_stat_repository.update_flows(flows)
 
             except Exception:
                 logging.info(traceback.format_exc())
