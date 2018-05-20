@@ -222,28 +222,24 @@ export default {
     async onActionChange(i) {
       const action = this.form.actions[i];
       const sel = action.action;
-      // action.data = "";
-      // console.log(sel)
+      const device_id = action.device_id;
       if (sel == 2) {
         this.isFetching = true;
         // Cache
-        if (this.nextHopIP_[action.device_id] || action.device_id == "0") {
+        if (this.nextHopIP_[device_id] || device_id == "0") {
           this.isFetching = false;
           return;
         }
-        if (!action.device_id) {
+        if (!device_id) {
           console.log("Found undefind", action);
           return;
         }
         try {
-          const res = await this.$axios.$get(
-            `device/${action.device_id}/neighbor`
-          );
-          const m_ip = action.device_id;
+          const res = await this.$axios.$get(`device/${device_id}/neighbor`);
           const neighbor = res.neighbor;
           this.nextHopIP_ = {
             ...this.nextHopIP_,
-            [m_ip]: neighbor
+            [device_id]: neighbor
           };
         } catch (error) {}
         this.isFetching = false;
@@ -295,10 +291,8 @@ export default {
       };
       await this.sleep(100);
       for (let i = 0; i < n.actions.length; i++) {
-        // console.log(n.actions[i]);
         await this.onActionChange(i);
         if (n.actions[i].action === 2) {
-          // console.log();
           if (
             !this.nextHopIP_[n.actions[i].device_id].find(
               v => v.ip_addr === n.actions[i].data

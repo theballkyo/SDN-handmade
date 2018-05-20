@@ -58,7 +58,8 @@ class FlowRoutingView(HTTPMethodView):
             actions = []
             for action in request.json['actions']:
                 actions.append({
-                    'management_ip': action['management_ip'],
+                    'device_id': action['device_id'],
+                    # 'management_ip': action['management_ip'],
                     'action': int(action['action']),
                     'data': action['data']
                 })

@@ -137,7 +137,7 @@ class LogBug:
                 raise
             except EOFError:
                 break
-            except:
+            except Exception:
                 import sys
                 import traceback
                 # print >> sys.stderr, 'Whoops! Problem:'
@@ -156,6 +156,7 @@ _logbug = {'logbug': LogBug()}
 def init(level=0):
     _logbug['logbug'].log_level = level
     _logbug['logbug'].auto_run()
+
 
 def get():
     if not _logbug['logbug']:

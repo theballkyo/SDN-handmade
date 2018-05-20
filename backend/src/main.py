@@ -32,8 +32,8 @@ def main():
     # rest_server.run()
 
     # Start CLI
-    cli = CLIController()
-    cli.init(topology, lb.get(), settings.app['version'])
+    cli = CLIController(settings.app['version'])
+    # cli.init()
 
     cli.cmdloop("Welcome to SDN Handmade. Type help to list commands.\n")
 

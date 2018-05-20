@@ -1,7 +1,7 @@
 import pprint
 from time import time
 
-from repository import get_service, PolicyRoute
+from repository import get, PolicyRoute
 from router_command.policy_command import generate_config_command, generate_remove_command
 import logging
 
@@ -12,9 +12,10 @@ from typing import Dict
 
 class PolicyMonitorTask:
     def __init__(self):
-        self.device_repo = get_service('device')
-        self.policy_service = get_service('policy')
-        self.policy_seq_service = get_service('policy_seq')
+        self.device_repository = get('device')
+        self.flow_routing_repository = get('flow_routing')
+        self.used_flow_id_repository = get('used_flow_id')
+        self.snmp_fetch = SNMPFetch()
 
     @staticmethod
     def diff(currently_policy: Dict[str, any], new_policy: Dict[str, any]) -> Dict[str, any]:
@@ -62,13 +63,14 @@ class PolicyMonitorTask:
 
         # Step 1
         # new_policy = self.policy_service.policy_pending.find_one({}, sort=[('time', -1)])
-        flow_routing_pending = self.policy_service.find_pending_apply()
+        flow_routing_pending = self.flow_routing_repository.find_pending_apply()
 
         for flow in flow_routing_pending:
             if flow['info']['status'] == PolicyRoute.STATUS_WAIT_APPLY:
                 self._apply_flow(flow, ssh_connection)
             elif flow['info']['status'] == PolicyRoute.STATUS_WAIT_REMOVE:
                 self._remove_flow(flow, ssh_connection)
+            self.snmp_fetch.run(ssh_connection)
 
         # if not new_policy:
         #     return
@@ -153,7 +155,7 @@ class PolicyMonitorTask:
 
         # Force update SNMP interfaces
         # snmp_fetch = SNMPFetch()
-        # snmp_fetch.run(ssh_connection)
+        # self.snmp_fetch.run(ssh_connection)
 
     def _apply_flow(self, flow, ssh_connection):
         """
@@ -167,7 +169,7 @@ class PolicyMonitorTask:
 
         flow_id = flow.get('flow_id')
         if flow_id is None:
-            flow_id = self.policy_seq_service.get_new_id()
+            flow_id = self.used_flow_id_repository.get_new_id()
             # flow['flow_id'] = flow_i
         # logging.info(flow_id)
         new_flow = flow.get('new_flow')
@@ -182,9 +184,9 @@ class PolicyMonitorTask:
         for action in flow_actions:
             # logging.info(pprint.pformat("Node ID: {}".format(action['management_ip'])))
             if action.get("device_id"):
-                device = self.device_repo.get_device_by_id(action["device_id"])
+                device = self.device_repository.get_device_by_id(action["device_id"])
             else:
-                device = self.device_repo.get_device_by_mgmt_ip(action["management_ip"])
+                device = self.device_repository.get_device_by_mgmt_ip(action["management_ip"])
             # logging.info(device)
             # action_cmd = generate_action_command(device['type'], flow, flow_id, flow_name, action)
             cmd = generate_config_command(device['type'], new_flow, flow_id, flow_name, action)
@@ -199,9 +201,9 @@ class PolicyMonitorTask:
 
             logging.info(pprint.pformat("Node ID: {}".format(action['management_ip'])))
             if action.get("device_id"):
-                device = self.device_repo.get_device_by_id(action["device_id"])
+                device = self.device_repository.get_device_by_id(action["device_id"])
             else:
-                device = self.device_repo.get_device_by_mgmt_ip(action["management_ip"])
+                device = self.device_repository.get_device_by_mgmt_ip(action["management_ip"])
             cmd = generate_remove_command(device['type'], flow)
             device_list[device['management_ip']] = cmd
 
@@ -229,9 +231,9 @@ class PolicyMonitorTask:
         logging.info(pprint.pformat(new_flow))
 
         # Step 6 Update policy table
-        self.policy_service.update_flow(new_flow)
+        self.flow_routing_repository.update_flow(new_flow)
         # Set policy seq to in_use is True
-        self.policy_seq_service.set_use_id(flow_id)
+        self.used_flow_id_repository.set_use_id(flow_id)
 
     def _update_flow(self, flow, ssh_connection):
         """
@@ -250,9 +252,9 @@ class PolicyMonitorTask:
             #     continue
 
             if action.get("device_id"):
-                device = self.device_repo.get_device_by_id(action["device_id"])
+                device = self.device_repository.get_device_by_id(action["device_id"])
             else:
-                device = self.device_repo.get_device_by_mgmt_ip(action["management_ip"])
+                device = self.device_repository.get_device_by_mgmt_ip(action["management_ip"])
             cmd = generate_remove_command(device['type'], flow)
             device_list[device['management_ip']] = cmd
 
@@ -266,6 +268,6 @@ class PolicyMonitorTask:
         ssh_connection.send_config_set(device_list)
 
         # Remove flow routing
-        self.policy_service.remove_by_id(flow['_id'])
+        self.flow_routing_repository.remove_by_id(flow['_id'])
         # Return flow_id
-        self.policy_seq_service.set_not_use_id(flow['flow_id'])
+        self.used_flow_id_repository.set_not_use_id(flow['flow_id'])

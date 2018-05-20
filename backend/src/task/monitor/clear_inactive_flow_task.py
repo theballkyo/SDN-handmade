@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from repository import get
 from worker.ssh.ssh_worker import SSHConnection
@@ -24,7 +25,8 @@ class ClearInactiveFlowTask:
         :param ssh_connection:
         :return:
         """
-        # later_time = datetime.datetime.utcnow() - datetime.timedelta(seconds=self.inactive_time)
-        later_time = datetime.datetime.now() - datetime.timedelta(seconds=self.inactive_time)
-        self.flow_stat_repository.delete_many(filter={'created_at': {'$lte': later_time}})
+        later_time = datetime.datetime.utcnow() - datetime.timedelta(seconds=self.inactive_time)
+        # later_time = datetime.datetime.now() - datetime.timedelta(seconds=self.inactive_time)
+        logging.info("Clear flow is later: " + str(later_time))
+        self.flow_stat_repository.model.delete_many({'created_at': {'$lte': later_time}})
         return True

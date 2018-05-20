@@ -49,7 +49,7 @@ def unix_to_datetime(unix_time):
 
 
 def datetime_now():
-    return datetime.datetime.now()
+    return datetime.datetime.utcnow()
 
 
 def fraction_to_percent(numerator, denominator):

@@ -21,12 +21,12 @@
             <h5 class="mb-1">{{device.name}}</h5>
             <small>{{ formatDuration(device.uptime) }}</small>
           </div>
-          
-          <p class="d-flex w-100 justify-content-between">SSH Status: 
+
+          <p class="d-flex w-100 justify-content-between">SSH Status:
             <span v-if="device.is_ssh_connect" class="badge badge-success">Connected</span>
-            <span v-else class="badge badge-danger">No connection</span>
+            <span v-else class="badge badge-danger">Not connected !</span>
           </p>
-          <p class="d-flex w-100 justify-content-between">Last SNMP fetch Status: 
+          <p class="d-flex w-100 justify-content-between">Last SNMP fetch Status:
             <span v-if="device.is_snmp_connect" class="badge badge-success">Success</span>
             <span v-else class="badge badge-danger">Fail</span>
           </p>
@@ -62,8 +62,8 @@
               <tr v-for="(interf, i) in devices[selectDevice].interfaces" :key="i">
                 <td>{{interf.description}}</td>
                 <td>{{interf.ipv4_address}}</td>
-                <td>{{interf.bw_in_usage_percent}}</td>
-                <td>{{interf.bw_out_usage_percent}}</td>
+                <td>{{parseFloat(interf.bw_in_usage_percent).toFixed(2) | 0.00}}</td>
+                <td>{{parseFloat(interf.bw_out_usage_percent).toFixed(2) | 0.00}}</td>
               </tr>
             </tbody>
           </table>

@@ -36,8 +36,8 @@ class PathFinder:
         # Cache link information
         self.link_cache = {}
 
-        self.device_service = repository.get_service("device")
-        self.route_service = repository.get_service('route')
+        self.device_repository = repository.get("device")
+        self.copied_route_repository = repository.get('copied_route')
 
         # Create NetworkX graph
         self.graph = None
@@ -46,7 +46,7 @@ class PathFinder:
     def update_graph(self):
         """ Use for update NetworkX graph object
         """
-        devices = self.device_service.get_all()
+        devices = self.device_repository.get_all()
         # print(services.device_service.get_active().count())
         try:
             self.graph = generate_graph.create_networkx_graph(devices)
@@ -77,12 +77,21 @@ class PathFinder:
             path = set()
         dst_ip = netaddr.IPAddress(dst_ip)
         start_device_ip = src_ip
+        _device_id = self.device_repository.get_device_by_mgmt_ip(start_device_ip)
 
         # Todo Check route from route-map
-
-        routes = self.route_service.route.find({
-            'type': 3,
-            'device_ip': start_device_ip,
+        """
+        other    (1), -- not specified by this MIB
+        reject   (2), -- route which discards traffic
+        local    (3), -- local interface
+        remote   (4)  -- remote destination
+        """
+        routes = self.copied_route_repository.model.find({
+            'type': 4,
+            # 'type': {
+            #     '$ne':
+            # }
+            'device_id': _device_id['_id'],
             'start_ip': {
                 '$lte': dst_ip.value  # Using IP integer format
             },
@@ -113,7 +122,7 @@ class PathFinder:
                     return path
                 path.add(tuple(final_path))
                 return
-            next_hop_device = self.device_service.device.find_one({
+            next_hop_device = self.device_repository.model.find_one({
                 'interfaces.ipv4_address': next_hop
             })
             if next_hop_device is None:
@@ -324,7 +333,7 @@ class PathFinder:
     def get_link(self, link_id, link_data, force_update=False):
         link = self.link_cache.get(link_id)
         if not link or force_update:
-            links = self.device_service.device.find({
+            links = self.device_repository.model.find({
                 'interfaces.ipv4_address': {
                     '$in': [
                         link_data['src_ip'], link_data['dst_ip']
@@ -361,7 +370,7 @@ class PathFinder:
         return _links
 
     def get_management_ip(self, ip):
-        device = self.device_service.find_by_if_ip(ip)
+        device = self.device_repository.find_by_if_ip(ip)
         if device is None:
             return None
         return device['management_ip']

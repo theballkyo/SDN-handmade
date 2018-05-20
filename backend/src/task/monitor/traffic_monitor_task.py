@@ -6,6 +6,7 @@ import sdn_utils
 from repository import get, PolicyRoute
 from tools import PathFinder
 from worker.ssh.ssh_worker import SSHConnection
+import pprint
 
 
 class TrafficMonitorTask:
@@ -89,27 +90,35 @@ class TrafficMonitorTask:
 
                     l4_src_port = in_policy.get('src_port')
                     if not l4_src_port:
-                        l4_src_port = in_policy['new_flow']['src_port']
+                        try:
+                            l4_src_port = in_policy['new_flow']['src_port']
+                        except KeyError:
+                            l4_src_port = None
 
                     l4_dst_port = in_policy.get('dst_port')
                     if not l4_dst_port:
-                        l4_dst_port = in_policy['new_flow']['dst_port']
+                        try:
+                            l4_dst_port = in_policy['new_flow']['dst_port']
+                        except KeyError:
+                            l4_dst_port = None
 
-                    not_in.append({
+                    or_match = [{
                         'ipv4_src_addr': {
                             '$ne': ipv4_src_addr
-                        },
-                        'ipv4_dst_addr': {
+                        }},
+                        {'ipv4_dst_addr': {
                             '$ne': ipv4_dst_addr
-                        },
-                        'l4_src_port': {
+                        }}]
+                    if l4_src_port is not None:
+                        or_match.append({'l4_src_port': {
                             '$ne': l4_src_port
-                        },
-                        'l4_dst_port': {
+                        }})
+                    if l4_dst_port is not None:
+                        or_match.append({'l4_dst_port': {
                             '$ne': l4_dst_port
-                        }
-                    })
-
+                        }})
+                    not_in.append({'$or': or_match})
+                pprint.pprint(not_in)
                 # Todo support port, protocol
                 flows = self.flow_stat_repository.summary_flow_v2(
                     device['management_ip'],

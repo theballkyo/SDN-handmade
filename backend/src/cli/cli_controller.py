@@ -16,15 +16,16 @@ class CLIController(SDNCommand):
     _COMPLETE_SHOW = ('device', 'flow', 'topology',
                       'graph', 'version', 'route')
 
-    def init(self, topology, logbug, version):
-        self.topology = topology
-        self.logbug = logbug
+    def __init__(self, version):
+        super(CLIController).__init__()
+        # self.topology = topology
+        # self.logbug = logbug
         self.version = version
-        self.topology_command = TopologyCommand(topology)
-        self.device_command = DeviceCommand(topology, logbug)
-        self.show_command = ShowCommand(topology)
-        self.config_command = ConfigCommand(topology, logbug)
-        self.prompt = 'SDN Handmade (0.0.1)# '
+        # self.topology_command = TopologyCommand(topology)
+        # self.device_command = DeviceCommand(topology, logbug)
+        # self.show_command = ShowCommand(topology)
+        # self.config_command = ConfigCommand(topology, logbug)
+        self.prompt = 'SDN Handmade ({:s})# '.format(version)
         self.logbug.prompt = self.prompt
 
     def do_show(self, args):

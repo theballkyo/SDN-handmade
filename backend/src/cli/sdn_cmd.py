@@ -1,8 +1,9 @@
 import cmd
+import logbug
 
 
 class SDNCommand(cmd.Cmd):
-    logbug = None
+    logbug = logbug.get()
 
     def do_exit(self, args):
         return True

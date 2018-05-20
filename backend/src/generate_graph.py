@@ -13,14 +13,14 @@ def create_networkx_graph(devices, add_link=True):
     networkx = nx.Graph()
     # networkx = nx.MultiGraph()
     # networkx.add
-    cdp_service = repository.get_service('cdp')
-    device_service = repository.get_service('device')
-    link_service = repository.get_service('link')
+    device_neighbor_repository = repository.get('device_neighbor')
+    device_repository = repository.get('device')
+    link_utilization_repository = repository.get('link_utilization')
 
     link_list = []
 
     for src_device in devices:
-        cdp = cdp_service.get_by_management_ip(src_device['management_ip'])
+        cdp = device_neighbor_repository.get_by_device_id(src_device['_id'])
 
         if cdp is not None:
             cdp_neighbor = cdp.get('neighbor')
@@ -29,7 +29,7 @@ def create_networkx_graph(devices, add_link=True):
             for neighbor in cdp_neighbor:
                 # check device is exist in topology
                 # If not continue to next cdp device
-                neighbor_device = device_service.find_by_if_ip(neighbor.get('ip_addr'))
+                neighbor_device = device_repository.find_by_if_ip(neighbor.get('ip_addr'))
                 if neighbor_device is None:
                     continue
 
@@ -159,18 +159,18 @@ def create_networkx_graph(devices, add_link=True):
             # raise NotImplementedError("SNMP currently is not support")
             return networkx
     if add_link:
-        link_service.add_links(link_list)
+        link_utilization_repository.add_links(link_list)
 
     return networkx
 
 
 def get_all_subnet():
-    cdp_service = repository.get_service('cdp')
-    device_service = repository.get_service('device')
-    devices = device_service.get_active()
+    device_neighbor_repository = repository.get('device_neighbor')
+    device_repository = repository.get('device')
+    devices = device_repository.get_active()
     subnet_list = {}
     for device in devices:
-        cdp_info = cdp_service.get_by_management_ip(device.get('management_ip'))
+        cdp_info = device_neighbor_repository.get_by_device_ip(device.get('management_ip'))
         if not cdp_info:
             raise NotImplementedError('Please enable CDP to use this function.')
 

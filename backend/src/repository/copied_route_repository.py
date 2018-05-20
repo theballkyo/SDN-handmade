@@ -1,4 +1,5 @@
 import netaddr
+from bson.objectid import ObjectId
 
 from repository.repository import Repository
 
@@ -49,17 +50,33 @@ class CopiedRouteRepository(Repository):
             },
             'type': self.route_type['local']  # Local
         }, {
-            'device_ip': 1
+            'device_id': 1
         })
 
         hosts = []
+        device_id = []
 
         for route in routes:
-            hosts.append(route['device_ip'])
+            device_id.append(ObjectId(route['device_id']))
+
+        devices = self.db.device.find({
+            '_id': {'$in': device_id}
+        }, {
+            'management_ip'
+        })
+
+        for device in devices:
+            hosts.append(device['management_ip'])
+        # hosts.append(route['device_ip'])
 
         return hosts
 
-    def delete_all_by_mgmt_ip(self, management_ip: str):
+    def delete_all_by_device_ip(self, device_ip: str):
         return self.model.delete_many({
-            'management_ip': management_ip
+            'device_ip': device_ip
+        })
+
+    def delete_all_by_device_id(self, device_id: str):
+        return self.model.delete_many({
+            'device_id': ObjectId(device_id)
         })

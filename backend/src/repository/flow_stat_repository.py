@@ -1,6 +1,7 @@
 import logging
 
 from repository.repository import Repository
+import pprint
 
 
 class FlowStatRepository(Repository):
@@ -224,7 +225,7 @@ class FlowStatRepository(Repository):
             #     # }}
             # ]
             match['$and'] = not_in
-
+        logging.info(pprint.pformat(match))
         return self.model.aggregate([
             {'$match': match},
             {'$group': {

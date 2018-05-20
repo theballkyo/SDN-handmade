@@ -37,6 +37,9 @@ def _generate_match(ip, wildcard, port):
         elif port.isdigit():
             acl_cmd += " eq {}".format(port)
 
+    if isinstance(port, int):
+        acl_cmd += " eq {}".format(port)
+
     return acl_cmd
 
 

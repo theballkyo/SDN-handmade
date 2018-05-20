@@ -26,14 +26,15 @@ class SNMPWorker:
         """ Get snmp information and add to database
         """
 
+        device_id = device['_id']
         host = device['management_ip']
         community = device['snmp_info']['community']
         port = device['snmp_info']['port']
 
         results = await asyncio.gather(
-            asyncio.ensure_future(snmp_process.process_system(host, community, port)),
-            asyncio.ensure_future(snmp_process.process_route(host, community, port)),
-            asyncio.ensure_future(snmp_process.process_cdp(host, community, port)),
+            asyncio.ensure_future(snmp_process.process_system(device_id, host, community, port)),
+            asyncio.ensure_future(snmp_process.process_route(device_id, host, community, port)),
+            asyncio.ensure_future(snmp_process.process_cdp(device_id, host, community, port)),
         )
 
         device_repository = repository.get("device")
@@ -55,7 +56,7 @@ class SNMPWorker:
         """
         management_ip = device['management_ip']
         device_repository = repository.get('device')
-        logging.info("SNMP Worker: Start loop device IP %s", management_ip)
+        # logging.info("SNMP Worker: Start loop device IP %s", management_ip)
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         if can_uvloop:
@@ -67,7 +68,7 @@ class SNMPWorker:
         device_repository.set_snmp_finish_running(management_ip)
 
         loop.close()
-        logging.info("SNMP Worker: device IP %s has stopped", device['management_ip'])
+        # logging.info("SNMP Worker: device IP %s has stopped", device['management_ip'])
 
     def shutdown(self):
         """ shutdown
@@ -85,7 +86,7 @@ class SNMPWorker:
     def run(self):
         num_worker = sdn_utils.get_snmp_num_worker()
 
-        executor = ProcessPoolExecutor(1)
+        executor = ProcessPoolExecutor(num_worker)
         device_repository = repository.get('device')
         while not self.stop_signal:
             self.running = list(filter(lambda x: x.done() is False, self.running))

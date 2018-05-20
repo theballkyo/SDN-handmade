@@ -45,7 +45,7 @@
                     </thead>
                     <tbody>
                       <tr v-for="(action, i2) in flow.actions" :key="i2">
-                        <td>{{action.management_ip}}</td>
+                        <td>{{getDeviceNameById(action.device_id.$oid)}}</td>
                         <td>{{getActionName(action.action)}}</td>
                         <td>{{action.data}}</td>
                       </tr>
@@ -90,11 +90,13 @@ export default {
     return {
       flows: [],
       showCidr: true,
-      isFetching: false
+      isFetching: false,
+      devices: {}
     };
   },
   mixins: [ipaddrMixin],
   async mounted() {
+    await this.fetchDevice();
     await this.fetchData();
   },
   methods: {
@@ -111,6 +113,17 @@ export default {
         this.flows = fetchData.flows;
       } catch (e) {}
       this.isFetching = false;
+    },
+    async fetchDevice() {
+      try {
+        const res = await this.$axios.$get("device");
+        for (let device in res.devices) {
+          this.devices[res.devices[device]._id.$oid] = res.devices[device];
+        }
+      } catch (e) {}
+    },
+    getDeviceNameById(id) {
+      return this.devices[id].name;
     },
     getActionName(id) {
       return ACTIONS[id];

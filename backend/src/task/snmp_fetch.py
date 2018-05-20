@@ -5,6 +5,7 @@ from snmp.snmp_worker import SNMPWorker
 from repository import get_service
 from concurrent.futures import wait, ProcessPoolExecutor
 import sdn_utils
+from tools import PathFinder
 
 
 class SNMPFetch(Task):
@@ -15,6 +16,7 @@ class SNMPFetch(Task):
 
         self.executor = ProcessPoolExecutor(num_worker)
         self.running_device = []
+        self.path_finder = PathFinder(auto_update_graph=False)
 
     def run(self, ssh_connection):
         logging.info("SNMP fetch start")
@@ -23,3 +25,4 @@ class SNMPFetch(Task):
             self.running_device.append(self.executor.submit(SNMPWorker.run_loop, device))
         wait(self.running_device)
         logging.info("SNMP fetch end")
+        self.path_finder.update_graph()

@@ -1,13 +1,14 @@
+import logging
+import time
+
 from netaddr import IPNetwork
 
-from snmp import snmp_async
 import repository
 import sdn_utils
-import time
-import logging
+from snmp import snmp_async
 
 
-async def process_cdp(host, community, port):
+async def process_cdp(device_id, host, community, port):
     device_neighbor_repository = repository.get('device_neighbor')
     device_repository = repository.get('device')
     cdp = await snmp_async.get_cdp(host, community, port)
@@ -16,13 +17,13 @@ async def process_cdp(host, community, port):
         device_repository.set_cdp_by_mgmt_ip(host, False)
     else:
         # Insert CDP
-        device_neighbor_repository.update_neighbor(host, cdp)
+        device_neighbor_repository.update_neighbor(device_id, host, cdp)
         device_repository.set_cdp_by_mgmt_ip(host, True)
 
     return True
 
 
-async def process_system(host, community, port):
+async def process_system(device_id, host, community, port):
     device_repository = repository.get('device')
     system_info = await snmp_async.get_system_info(host, community, port)
 
@@ -119,7 +120,7 @@ async def process_system(host, community, port):
     return True
 
 
-async def process_route(host, community, port):
+async def process_route(device_id, host, community, port):
     copied_route_repository = repository.get('copied_route')
     routes = await snmp_async.get_routes(host, community, port)
 
@@ -142,13 +143,18 @@ async def process_route(host, community, port):
 
         route['start_ip'] = start_ip
         route['end_ip'] = end_ip
-        route['management_ip'] = route['device_ip']
+
+        # route['device_ip'] = route['device_ip']
+        del route['device_ip']
+
+        route['device_id'] = device_id
 
         # Set update time
         route['updated_at'] = time.time()
 
     # Clear old routes
-    copied_route_repository.delete_all_by_mgmt_ip(host)
+    # copied_route_repository.delete_all_by_device_ip(host)
+    copied_route_repository.delete_all_by_device_id(device_id)
     # Insert net routes
-    copied_route_repository.route.insert_many(routes)
+    copied_route_repository.model.insert_many(routes)
     return True

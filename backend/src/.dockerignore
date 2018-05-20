@@ -17,3 +17,6 @@ coverage.xml
 *,cover
 *.log
 .git
+settings.py
+logs/*
+imgs/*

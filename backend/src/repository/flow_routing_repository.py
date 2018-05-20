@@ -170,17 +170,8 @@ class FlowRoutingRepository(Repository):
         })
 
     def add_or_update_flow_routing(self, flow_routing):
-        # if flow_routing.get('flow_id'):
-        #     old_flow = self.policy.find_one({
-        #         ''
-        #     })
-        #     if old_flow:
-        #         old_flow['new_flow'] = flow_routing
-        #         old_flow['updated_at'] = sdn_utils.datetime_now()
-        #         self.policy.update_one({'flow_id': ''}, {'$set': old_flow})
-        #         return True
         new_flow = flow_routing['new_flow']
-        old_flow = self.policy.find_one({
+        old_flow = self.model.find_one({
             'src_ip': new_flow['src_ip'],
             'src_port': new_flow['src_port'],
             'src_wildcard': new_flow['src_wildcard'],
@@ -191,9 +182,14 @@ class FlowRoutingRepository(Repository):
 
         now = sdn_utils.datetime_now()
 
+        flow_routing['created_at'] = now
         flow_routing['updated_at'] = now
+
+        for action in flow_routing['new_flow']['actions']:
+            action['device_id'] = ObjectId(action['device_id'])
+
         if old_flow:
-            self.policy.update_one({
+            self.model.update_one({
                 '_id': old_flow['_id']
             }, {'$set': {
                 'new_flow': flow_routing['new_flow'],
@@ -201,8 +197,7 @@ class FlowRoutingRepository(Repository):
             }})
             return True
 
-        flow_routing['created_at'] = now
-        self.policy.insert_one(flow_routing)
+        self.model.insert_one(flow_routing)
         return True
 
     def find_pending_apply(self, limit=None):

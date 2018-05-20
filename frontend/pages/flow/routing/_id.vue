@@ -32,6 +32,7 @@ export default {
     form.dst_subnet = this.wildcardToSubnet(flow.dst_wildcard);
     form.actions = [];
     for (let obj in flow.actions) {
+      flow.actions[obj].device_id = flow.actions[obj].device_id.$oid;
       form.actions.push(flow.actions[obj]);
     }
     form.flow_id = flow.flow_id;

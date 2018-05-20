@@ -70,12 +70,12 @@ class DeviceNeighborView(HTTPMethodView):
 
     def get(self, request, device_id):
         device_neighbor_repo = request.app.db['device_neighbor']
-        try:
-            ip = IPv4Address(device_id)
-            ip = str(ip)
-        except AddressValueError:
-            device = request.app.db['device'].get_by_id(device_id)
-            ip = device['management_ip']
+        # try:
+        #     ip = IPv4Address(device_id)
+        #     ip = str(ip)
+        # except AddressValueError:
+        #     device = request.app.db['device'].get_by_id(device_id)
+        #     ip = device['management_ip']
 
-        neighbor = device_neighbor_repo.get_by_management_ip(ip)
+        neighbor = device_neighbor_repo.get_by_device_id(device_id)
         return json({'neighbor': neighbor['neighbor'], 'success': True}, dumps=dumps)

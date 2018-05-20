@@ -1,36 +1,41 @@
-import repository
-from cli.sdn_cmd import SDNCommand
-import logging
 import ipaddress
+import logging
+
+import logbug
+import repository
 import sdn_utils
-import services
-from repository import get_service
+from cli.sdn_cmd import SDNCommand
+from repository import DeviceRepository
+
+
 # from services.device_service import DeviceService
-from sdn_handmade import Device
 
 
-class AddDeviceCommand():
-    def __init__(self, topology, logbug):
-        self.topology = topology
-        self.logbug = logbug
+class AddDeviceCommand:
+    SNMP_VERSION = (
+        '2c',
+    )
 
-    def __input(self, prompt):
-        inp = self.logbug.read_input(prompt)
+    def __init__(self):
+        self.logbug = logbug.get()
+
+    def _input(self, msg):
+        inp = self.logbug.read_input(msg)
         if inp == 'exit':
             raise KeyboardInterrupt
         return inp
 
-    def __get_device_type(self):
+    def _get_device_type(self):
         while 1:
-            inp = self.__input("Device type: ")
+            inp = self._input("Device type: ")
             accept_device = [device[0] for device in self.topology.accept_device]
             if inp.lower() in accept_device:
                 return inp
             print("Device is not in list ({})".format(",".join((accept_device))))
 
-    def __get_ip(self):
+    def _get_ip(self):
         while 1:
-            inp = self.__input("Device management ip(v4): ")
+            inp = self._input("Device management ip(v4): ")
             try:
                 ip = ipaddress.ip_address(inp)
                 if ip.version != 4:
@@ -40,23 +45,31 @@ class AddDeviceCommand():
             except ValueError:
                 print("IP format not correct")
 
-    def __get_snmp_community(self):
-        inp = self.__input("SNMP Community string [public]: ")
+    def _get_snmp_version(self):
+        inp = self._input("SNMP Version [2c]: ")
+        while True:
+            if inp not in self.SNMP_VERSION:
+                print("SNMP Version can be only {}".format(self.SNMP_VERSION))
+                continue
+            return inp
+
+    def _get_snmp_community(self):
+        inp = self._input("SNMP Community string [public]: ")
         if inp == '':
             return 'public'
         return inp
 
-    def __get_ssh_username(self):
-        inp = self.__input("SSH username: ")
+    def _get_ssh_username(self):
+        inp = self._input("SSH username: ")
         return inp
 
-    def __get_ssh_password(self):
-        inp = self.__input("SSH password: ")
+    def _get_ssh_password(self):
+        inp = self._input("SSH password: ")
         return inp
 
-    def __get_snmp_port(self):
-        while 1:
-            inp = self.__input("SNMP Port [161]: ")
+    def _get_snmp_port(self):
+        while True:
+            inp = self._input("SNMP Port [161]: ")
             if inp == '':
                 return 161
             if not inp.isdigit():
@@ -71,9 +84,9 @@ class AddDeviceCommand():
             except ValueError:
                 print("Port number must be Integer only")
 
-    def __get_ssh_port(self):
+    def _get_ssh_port(self):
         while 1:
-            inp = self.__input("SSH Port [22]: ")
+            inp = self._input("SSH Port [22]: ")
             if inp == '':
                 return 22
             if not inp.isdigit():
@@ -88,8 +101,8 @@ class AddDeviceCommand():
             except ValueError:
                 print("Port number must be Integer only")
 
-    def __get_ssh_secret(self):
-        inp = self.__input("SSH secret (enable password): ")
+    def _get_ssh_secret(self):
+        inp = self._input("SSH secret (enable password): ")
         return inp
 
     def add_handle(self):
@@ -103,38 +116,32 @@ class AddDeviceCommand():
         ssh_info = {}
         snmp_info = {}
         try:
-            device_info['type'] = self.__get_device_type()
-            device_info['ip'] = self.__get_ip()
+            device_info['type'] = self._get_device_type()
+            device_info['ip'] = self._get_ip()
 
-            ssh_info['username'] = self.__get_ssh_username()
-            ssh_info['password'] = self.__get_ssh_password()
-            ssh_info['secret'] = self.__get_ssh_secret()
-            ssh_info['port'] = self.__get_ssh_port()
+            ssh_info['username'] = self._get_ssh_username()
+            ssh_info['password'] = self._get_ssh_password()
+            ssh_info['secret'] = self._get_ssh_secret()
+            ssh_info['port'] = self._get_ssh_port()
 
-            snmp_info['community'] = self.__get_snmp_community()
-            snmp_info['port'] = self.__get_snmp_port()
+            snmp_info['version'] = self._get_snmp_version()
+            snmp_info['community'] = self._get_snmp_community()
+            snmp_info['port'] = self._get_snmp_port()
 
             logging.debug("Device info %s", device_info)
             logging.debug("SSH info %s", ssh_info)
             logging.debug("SNMP info %s", snmp_info)
 
-            # device = self.topology.create_device_object(device_info, ssh_info, snmp_info)
-            # self.topology.add_device(device)
-            device_service = get_service('device')
-            device_service.add_device({
+            device_repository = repository.get('device')
+            device_repository.add_device({
                 'management_ip': device_info['ip'],
-                'status': Device.STATUS_OFFLINE,
+                'status': DeviceRepository.STATUS_WAIT_UPDATE,
                 'type': device_info['type'],
                 'ssh_info': ssh_info,
                 'snmp_info': snmp_info,
-                # Todo
-                'netflow_src': {
-                    'ip': '0.0.0.0'
-                }
             })
 
             # Clear prompt
-            self.logbug.prompt = ''
         except KeyboardInterrupt:
             print("Interrupt add device.")
 
@@ -471,15 +478,14 @@ class FlowCommand(SDNCommand):
 
 
 class ConfigCommand(SDNCommand):
-    _AVAILABLE_ADD = ('device',)
+    _AVAILABLE_ADD = ('device', 'flow')
 
-    def __init__(self, topology, logbug):
+    def __init__(self):
         super(ConfigCommand, self).__init__()
-        self.topology = topology
-        self.logbug = logbug
-        self.prompt = 'SDN Handmade (0.0.1)(config)# '
-        self.add_device = AddDeviceCommand(topology, logbug)
+        self.prompt = 'SDN Handmade (1.0.0)(config)# '
+        self.add_device_cmd = AddDeviceCommand()
         self.device_repository = repository.get("device")
+        self.logbug = logbug.get()
 
     def do_remove(self, args):
         args = args.split(' ')
@@ -526,9 +532,9 @@ class ConfigCommand(SDNCommand):
         """
         args = args.split(' ')
         if args[0] == 'device':
-            self.add_device.add_handle()
+            self.add_device_cmd.add_handle()
             print("Added device to topology")
-            self.prompt = 'SDN Handmade (0.0.1)(config)# '
+            self.prompt = 'SDN Handmade (1.0.0)(config)# '
         elif args[0] == 'flow':
             if len(args) < 2:
                 print("Flow must be name")
@@ -550,15 +556,6 @@ class ConfigCommand(SDNCommand):
 
         else:
             print("Incomplete command. Usage: add [command]")
-        # if len(args) < 1:
-        #     print("Usage add [command]")
-        # else:
-        #     if args[1] ==
-
-    # def do_flow(self, args):
-    #     """ Add flow
-    #     """
-    #
 
     def _add_flow(self, name, args):
         """ Checking and add flow"""
@@ -597,4 +594,8 @@ class ConfigCommand(SDNCommand):
             print("Incorrect command.")
 
     def complete_add(self, text, line, begidx, endidx):
+        args = line.split(" ")
+        if len(args) > 1:
+            if args[1] == 'flow':
+                pass
         return [i for i in self._AVAILABLE_ADD if i.startswith(text)]
