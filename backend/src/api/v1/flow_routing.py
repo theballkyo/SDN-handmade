@@ -51,7 +51,7 @@ class FlowRoutingView(HTTPMethodView):
 
         policy_repo = request.app.db['flow_routing']
         policy_repo.add_or_update_flow_routing(policy)
-        return json({'success': True}, status=201)
+        return json({'status': 'ok'}, status=201)
 
     def patch(self, request):
         try:

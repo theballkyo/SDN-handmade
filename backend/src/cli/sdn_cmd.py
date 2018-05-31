@@ -5,6 +5,9 @@ import logbug
 class SDNCommand(cmd.Cmd):
     logbug = logbug.get()
 
+    def __init__(self):
+        super(SDNCommand, self).__init__()
+
     def do_exit(self, args):
         return True
 

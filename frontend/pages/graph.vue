@@ -1,6 +1,6 @@
 <template>
   <div class="row">
-    <div class="col-sm-12 col-md-8">
+    <div class="col-sm-12 col-md-12">
       <div class="card">
         <div class="card-header">
           Network graph
@@ -10,7 +10,7 @@
         </div>
       </div>
     </div>
-    <div class="col-sm-12 col-md-4">
+    <!-- <div class="col-sm-12 col-md-4">
       <div class="card">
         <div class="card-header">
           Information
@@ -23,7 +23,7 @@
           </pre>
         </div>
       </div>
-    </div>
+    </div> -->
   </div>
 </template>
 
@@ -108,7 +108,7 @@ export default {
             link.link_min_speed
           );
           let color;
-          if (speed < 30) {
+          if (speed < 50) {
             color = "rgb(144, 238, 144)";
           } else if (speed < 85) {
             color = "rgb(255, 165, 0)";

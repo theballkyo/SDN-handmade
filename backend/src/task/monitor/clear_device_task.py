@@ -59,7 +59,7 @@ class ClearDeviceTask:
         })
 
     def remove_flow_routing(self, flow_id):
-        self.flow_routing_repo.policy.remove({
+        self.flow_routing_repo.model.remove({
             "flow_id": flow_id
         })
 

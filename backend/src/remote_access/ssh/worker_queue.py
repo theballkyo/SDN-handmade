@@ -7,6 +7,7 @@ import threading
 import multiprocessing as mp
 import logging
 import repository
+from router_command.policy_command import get_netmiko_type
 
 
 class SSHQueueWorker(threading.Thread):
@@ -39,7 +40,8 @@ class SSHQueueWorker(threading.Thread):
             self.device_repository.set_ssh_is_connect_by_mgmt_ip(ssh_info['ip'], False)
             try:
                 net_connect = netmiko.ConnectHandler(
-                    device_type=ssh_info['device_type'],
+                    # device_type=ssh_info['device_type'],  # Old style
+                    device_type=get_netmiko_type(ssh_info['device_type']),  # New style
                     ip=ssh_info['ip'],
                     username=ssh_info['username'],
                     password=ssh_info['password'],

@@ -49,6 +49,7 @@
         </div>
         <div v-if="selectDevice >= 0" class="card-body">
           <DeviceForm title="Device information" :isManagementIpDisabled="true" :removeBtn="true" :device="devices[selectDevice]" @onSubmit="onSubmit" @onRemoveClick="onRemoveClick" />
+          <h2>Interfaces</h2>
           <table class="table">
             <thead>
               <tr>
@@ -62,12 +63,44 @@
               <tr v-for="(interf, i) in devices[selectDevice].interfaces" :key="i">
                 <td>{{interf.description}}</td>
                 <td>{{interf.ipv4_address}}</td>
-                <td>{{parseFloat(interf.bw_in_usage_percent).toFixed(2) | 0.00}}</td>
-                <td>{{parseFloat(interf.bw_out_usage_percent).toFixed(2) | 0.00}}</td>
+                <td>{{parseFloat(interf.bw_in_usage_percent).toFixed(2) || 0.00}}</td>
+                <td>{{parseFloat(interf.bw_out_usage_percent).toFixed(2) || 0.00}}</td>
               </tr>
             </tbody>
           </table>
-          Route...<br/> CDP... <br/>
+          <h2>Routes</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Protocol</th>
+                <th>Destination</th>
+                <th>Next-hop</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="route in routes" :key="route._id.$oid">
+                <td>{{ getRouteProtoText(route.proto) }}</td>
+                <td>{{ route.dst }}/{{ subnetToCidr(route.mask) }}</td>
+                <td>{{ route.next_hop }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <br/>
+          <h2>Neighbor</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Neighbor IP</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(neighbor, i) in neighbors" :key="i">
+                <td>{{ neighbor.name }}</td>
+                <td>{{ neighbor.ip_addr }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -76,6 +109,26 @@
 
 <script>
 import DeviceForm from "@/components/DeviceForm";
+import ipaddrMixin from "@/mixins/ipaddr";
+
+const ROUTE_PROTOCOL = {
+  1: "other",
+  2: "local",
+  3: "netmgmt",
+  4: "icmp",
+  5: "egp",
+  6: "ggp",
+  7: "hello",
+  8: "rip",
+  9: "isIs",
+  10: "esIs",
+  11: "ciscoIgrp",
+  12: "bbnSpfIgp",
+  13: "ospf",
+  14: "bgp",
+  15: "idpr",
+  16: "ciscoEigrp"
+};
 
 export default {
   data() {
@@ -83,12 +136,15 @@ export default {
       toggleTab: true,
       devices: [],
       selectDevice: -1,
-      isFetching: false
+      isFetching: false,
+      routes: [],
+      neighbors: []
     };
   },
   components: {
     DeviceForm
   },
+  mixins: [ipaddrMixin],
   async mounted() {
     await this.fetchData();
   },
@@ -132,6 +188,9 @@ export default {
       }
       return `${hours} hours, ${minutes} minutes`;
     },
+    getRouteProtoText(proto) {
+      return ROUTE_PROTOCOL[proto];
+    },
     async onSubmit(form) {
       console.log(form);
       const willUpdate = await swal({
@@ -170,9 +229,15 @@ export default {
         });
       }
     },
-    onDeviceClick(i) {
+    async onDeviceClick(i) {
       this.selectDevice = i;
-      // console.log(this.devices[i]);
+      const device = this.devices[i];
+      // Get routes
+      let res = await this.$axios.$get(`routes/${device._id.$oid}`);
+      this.routes = res.routes;
+      // Get neighbor
+      res = await this.$axios.$get(`neighbor/${device._id.$oid}`)
+      this.neighbors = res.neighbors.neighbor
     },
     onClickToggleTab() {
       this.toggleTab = !this.toggleTab;

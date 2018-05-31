@@ -164,3 +164,7 @@ def generate_remove_command(policy):
     acl = "no ip access-list extended {}".format(generate_acl_name(policy_id))
     route_map = "no route-map SDN-handmade permit {}".format(policy_id)
     return [route_map, acl]
+
+
+def get_netmiko_type():
+    return "cisco_ios"

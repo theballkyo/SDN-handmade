@@ -58,9 +58,17 @@ export default {
       edges: new vis.DataSet(this.edges)
     };
     const options = {
-      physics: true,
+      edges: {
+        smooth: {
+          forceDirection: "none"
+        }
+      },
+      physics: {
+        enabled: true,
+        minVelocity: 0.75
+      },
       nodes: {
-        shape: "dot",
+        shape: "dot"
         // scaling: {
         //   customScalingFunction: function(min, max, total, value) {
         //     return value / total;

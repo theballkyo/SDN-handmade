@@ -1,32 +1,24 @@
-import logging
-import time
-import ipaddress
-import networkx as nx
-import matplotlib.pyplot as plt
-
-from cli.sdn_cmd import SDNCommand
-from cli.topology_command import TopologyCommand
-from cli.device_command import DeviceCommand
-from cli.show_command import ShowCommand
+import repository
 from cli.config_mode.config_command import ConfigCommand
+from cli.sdn_cmd import SDNCommand
+import datetime
+from repository import CopiedRouteRepository
+import ipaddress
 
 
 class CLIController(SDNCommand):
-
-    _COMPLETE_SHOW = ('device', 'flow', 'topology',
-                      'graph', 'version', 'route')
+    _COMPLETE_SHOW = ('device', 'topology'
+                      , 'version')
 
     def __init__(self, version):
-        super(CLIController).__init__()
-        # self.topology = topology
-        # self.logbug = logbug
+        super(CLIController, self).__init__()
         self.version = version
-        # self.topology_command = TopologyCommand(topology)
-        # self.device_command = DeviceCommand(topology, logbug)
-        # self.show_command = ShowCommand(topology)
-        # self.config_command = ConfigCommand(topology, logbug)
+        self.config_command = ConfigCommand(version)
         self.prompt = 'SDN Handmade ({:s})# '.format(version)
         self.logbug.prompt = self.prompt
+        self.device_repository = repository.get('device')
+        self.link_utilization_repository = repository.get('link_utilization')
+        self.copied_route_repository = repository.get('copied_route')
 
     def do_show(self, args):
         """ Show detail of topology, device and more.
@@ -37,30 +29,7 @@ class CLIController(SDNCommand):
             print("Incorrect command.")
             return
         elif args[0] == 'device':
-            if len(args) < 2:
-                if len(self.topology.devices) == 0:
-                    print("No device in this topology.")
-                    return
-                for index, device in enumerate(self.topology.devices):
-                    print("[{}] {}".format(index, device.infomation_text()))
-                return
-            device_ip = args[1]
-            device = self.topology.get_device_by_ip(device_ip)
-            if device is None:
-                print("Not found device IP {}".format(device_ip))
-                return
-            if len(args) < 3:
-                # Todo show device info
-                print(device.infomation_text())
-                return
-            if args[2] == 'route':
-                routes = device.get_routes()
-                self.print_pretty_routes(routes, device.get_interfaces())
-                return
-            if 'interface'.startswith(args[2]):
-                interfaces = device.get_interfaces()
-                self.print_interfaces(interfaces)
-                return
+            return self._show_device(args[1:])
         elif args[0] == 'flow':
             # print(len(self.topology.get_flows()))
             for flow in self.topology.get_flows():
@@ -68,36 +37,27 @@ class CLIController(SDNCommand):
             return
         elif args[0] == 'route':
             return self.show_route(args[1:])
-        elif args[0] == 'graph':
-            G = self.topology.create_graph()
-            # edge_labels = nx.get_edge_attributes(G,'state')
-            nx.draw_networkx_edge_labels(G, pos=nx.spring_layout(G))
-            # nx.draw_networkx_edge_labels(G, pos, labels = edge_labels)
-            plt.rcParams["figure.figsize"] = [30, 30]
-            nx.draw_circular(G, with_labels=True)
-            filename = "imgs/topo-{}.png".format(time.time())
-            plt.savefig(filename)
-            plt.show(block=False)
         elif args[0] == 'topology':
-            self.topology.print_matrix()
+            self._show_topology()
+        # self.topology.print_matrix()
         elif args[0] == 'version':
-            print("SDN Handmade: 0.0.1")
+            print(self.version)
 
     def complete_show(self, text, line, begidx, endidx):
         # logging.debug("text: {}, line: {}, begidx: {}, endidx: {}".format(text, line, begidx, endidx))
         _text = line.split(' ')
         if _text[1] == 'device':
-            # logging.debug('Enter device')
             if len(_text) < 3:
-                # print("")
                 return []
             else:
                 device_ip = _text[2]
+            devices = self.device_repository.get_all()
+
             device_list = [
-                i.ip for i in self.topology.devices if i.ip.startswith(device_ip)]
+                i['management_ip'] for i in devices if i['management_ip'].startswith(device_ip)]
             if device_ip in device_list:
                 return [i for i in ('route', 'interface') if i.startswith(_text[3])]
-            logging.debug(device_list)
+            # logging.debug(device_list)
             return device_list
         return [i for i in self._COMPLETE_SHOW if i.startswith(text)]
 
@@ -193,3 +153,103 @@ class CLIController(SDNCommand):
             self.topology_command.handle_command(inp_split[1:])
         elif inp_split[0] in ('device',):
             self.device_command.handle_command(inp_split[1:])
+
+    def _show_topology(self):
+        links = self.link_utilization_repository.get_all()
+        device_set = set()
+        device_connect = set()
+        margin = 0
+        for link in links:
+            device_set.add(link['src_node_hostname'])
+            device_set.add(link['dst_node_hostname'])
+            device_connect.add(link['src_node_hostname'] + link['dst_node_hostname'])
+            margin = max(margin, len(link['src_node_hostname']))
+            margin = max(margin, len(link['dst_node_hostname']))
+        device_set = sorted(device_set)
+        margin += 2
+        print(" " * margin, end="")
+        for device in device_set:
+            print("{:^{margin}}".format(device, margin=margin), end="")
+        print("")
+        for device in device_set:
+            print("{:^{margin}}".format(device, margin=margin), end="")
+            for device2 in device_set:
+                if device == device2:
+                    print("{:^{margin}}".format("1", margin=margin), end="")
+                elif device + device2 in device_connect:
+                    print("{:^{margin}}".format("1", margin=margin), end="")
+                else:
+                    print("{:^{margin}}".format("0", margin=margin), end="")
+                # print(device, device2, end="\t")
+            print("")
+        # logging.info(device_set)
+        # logging.info(device_connect)
+
+    def _show_device(self, args):
+        if not args:
+            devices = self.device_repository.get_all()
+            margin = 0
+            i = 1
+            for device in devices:
+                uptime = str(datetime.timedelta(seconds=device['uptime'] // 100))
+                print("[{i}] {name} ({ip}) uptime - {uptime}".format(
+                    i=i,
+                    name=device['name'],
+                    ip=device['management_ip'],
+                    uptime=uptime
+                ))
+                i += 1
+            return
+        if len(args) == 1:
+            print("Incomplete command.")
+            return
+        elif args[1] == 'interface':
+            device = self.device_repository.get_device_by_mgmt_ip(args[0])
+            margin = 0
+            if not device:
+                print("Can't find device IP {ip}".format(ip=args[0]))
+                return
+            for interface in device['interfaces']:
+                margin = max(margin, len(interface.get('description')))
+            margin += 2
+            if margin < 16:
+                margin = 16
+            # Print header
+            print("{name:{margin}} {ip:16} [Bandwidth usage]".format(
+                name="Interface name",
+                ip="IP Address",
+                margin=margin
+            ))
+
+            for interface in device['interfaces']:
+                if_ip = interface.get('ipv4_address')
+                if not if_ip:
+                    if_ip = 'No IP Address'
+                print("{if_name:{margin}} {ip:16} IN: {bw_in:.2f}%, OUT: {bw_out:.2f}%".format(
+                    margin=margin,
+                    if_name=interface['description'],
+                    ip=if_ip,
+                    bw_in=interface.get('bw_in_usage_percent', 0.00),
+                    bw_out=interface.get('bw_out_usage_percent', 0.00),
+                ))
+        elif args[1] == 'route':
+            device = self.device_repository.get_device_by_mgmt_ip(args[0])
+            if not device:
+                print("Exit")
+                return
+            routes = self.copied_route_repository.get_by_device_id(device['_id'])
+            print("{proto:14} {dst:22}    Next-hop".format(
+                proto="Protocol",
+                dst="Destination"
+            ))
+            for route in routes:
+                dst = ipaddress.IPv4Network(route['dst'] + '/' + route['mask'])
+                # print(dst)
+                print("[{proto:12}] {dst:22} -> {nexthop}".format(
+                    proto=CopiedRouteRepository.route_proto_reverse[route['proto']],
+                    dst=str(dst),
+                    nexthop=route['next_hop']
+                ))
+        else:
+            print("Unknown command {}".format(args[1]))
+            return

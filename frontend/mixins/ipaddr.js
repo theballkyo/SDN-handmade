@@ -41,6 +41,9 @@ let mixin = {
           .map(b => (1 - b).toString())
           .join(""), 2)).join(".")
     },
+    subnetToCidr(subnet) {
+      return this.wildcardToCidr(this.subnetToWildcard(subnet))
+    },
     cidrToWildcard(cidr) {
       let subnet = ""
       let _subnet = ""

@@ -12,10 +12,39 @@ class CopiedRouteRepository(Repository):
         'remote': 4
     }
 
+    route_type_reverse = {
+        1: 'other',
+        2: 'reject',
+        3: 'local',
+        4: 'remote'
+    }
+
+    route_proto_reverse = {
+        1: 'other',
+        2: 'local',
+        3: 'netmgmt',
+        4: 'icmp',
+        5: 'egp',
+        6: 'ggp',
+        7: 'hello',
+        8: 'rip',
+        9: 'isIs',
+        10: 'esIs',
+        11: 'ciscoIgrp',
+        12: 'bbnSpfIgp',
+        13: 'ospf',
+        14: 'bgp',
+        15: 'idpr',
+        16: 'ciscoEigrp'
+    }
+
     def __init__(self, *args, **kwargs):
         super(CopiedRouteRepository, self).__init__(*args, **kwargs)
         self.route = self.db.copied_route  # Todo deprecated
         self.model = self.db.copied_route
+
+    def get_by_device_id(self, device_id):
+        return self.model.find({'device_id': ObjectId(device_id)})
 
     def find_by_device(self, management_ip):
         # Todo fix device_ip to management_ip

@@ -45,13 +45,13 @@ class DeviceView(HTTPMethodView):
                     'community': request.json['snmp_info']['community'],
                     'port': request.json['snmp_info']['port']
                 },
-                'status': DeviceRepository.STATUS_ACTIVE
+                'status': DeviceRepository.STATUS_WAIT_UPDATE
             }
         except ValueError:
             return json({'success': False, 'message': 'Invalidate form'})
 
         device_repo.add_device(device)
-        return json({'success': True, 'message': request.json})
+        return json({'success': True, 'message': request.json}, status=201)
 
     def patch(self, request, device_id):
         request.app.db["device"].set_information(device_id, request.json)
@@ -78,4 +78,4 @@ class DeviceNeighborView(HTTPMethodView):
         #     ip = device['management_ip']
 
         neighbor = device_neighbor_repo.get_by_device_id(device_id)
-        return json({'neighbor': neighbor['neighbor'], 'success': True}, dumps=dumps)
+        return json({'neighbor': neighbor['neighbor'], 'status': 'ok'}, dumps=dumps)
