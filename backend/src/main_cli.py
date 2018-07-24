@@ -16,22 +16,8 @@ def main():
 
     lb.init(logging.INFO)
 
-    # Create topology
-    # topology = sdn.Topology(
-    #     netflow_ip=settings.netflow['bind_ip'],
-    #     netflow_port=settings.netflow['bind_port']
-    # )
-
-    # Start topology loop
-    # topology.run()
-
-    # Start REST API Server
-    # rest_server = RestServer()
-    # rest_server.run()
-
     # Start CLI
     cli = CLIController(settings.app['version'])
-    # cli.init()
 
     cli.cmdloop("Welcome to SDN Handmade. Type help to list commands.\n")
 

@@ -3,9 +3,10 @@ import struct
 
 
 def convert_to_ip(ip_int):
-    """This docstring
+    """ Convert ip integer to ip str
     """
     return ".".join(str(x) for x in struct.unpack("4B", struct.pack("!I", ip_int)))
+
 
 FIELD_TYPES = {
     1: 'IN_BYTES',

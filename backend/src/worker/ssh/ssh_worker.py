@@ -119,20 +119,22 @@ class SSHWorker:
 
             devices = self.device_repository.get_all()
             for device in devices:
-                # If exists skip
+                # If device exists in list, skip
                 if device['management_ip'] in _running.keys():
+                    # Check device status is wait for update.
                     if device.get("status") == DeviceRepository.STATUS_WAIT_UPDATE:
-                        # logging.info("Start ssh update")
+
                         device_ip = device['management_ip']
                         ssh_info = device['ssh_info']
                         ssh_info['ip'] = device['management_ip']
                         ssh_info['device_type'] = device['type']
-                        # logging.info(ssh_info)
+
                         results_q.put({
                             "type": "update",
                             "device_ip": device_ip,
                             "ssh_info": ssh_info
                         })
+
                         self.device_repository.model.update_one({
                             "management_ip": device_ip
                         }, {"$set": {"status": DeviceRepository.STATUS_ACTIVE}})
@@ -153,25 +155,37 @@ class SSHWorker:
                         'stop_signal_value': self.manager.Value(bool, False)
                     }
                 }
+
                 logging.info("Create SSHQueueWorker")
                 queue_worker = SSHQueueWorker(**result['data'])
                 queue_worker.start()
                 logging.info("Started SSHQueueWorker")
                 results_q.put(result)
+
+                # Update list
                 _running[device['management_ip']] = queue_worker
 
             # Clear not Alive thread
             _remove = []
             for device in _running.keys():
+                # If SSH not running
                 if not _running[device].is_alive():
+                    # Remove
                     _remove.append(device)
+
+            # Remove device is not running
             for remove in _remove:
                 results_q.put({'device_ip': remove, 'remove': True})
                 _running.pop(remove)
+
+            # Cooldown 1 seconds
             time.sleep(1)
 
     def _update_worker_queue(self):
-        # Loop when results_q is empty
+        """
+        Update self.ssh_connection list of SSHQueueWorker
+        :return:
+        """
         while True:
             try:
                 logging.info(self.results_q.qsize())

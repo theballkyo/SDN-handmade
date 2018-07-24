@@ -1,9 +1,11 @@
 """ SDN Handmade for legacy Cisco device """
 import argparse
-import database
-import matplotlib
-import os
 import logging
+import os
+
+import matplotlib
+
+import database
 
 
 def main():
@@ -14,7 +16,6 @@ def main():
     import sdn_handmade as sdn
     from cli.cli_controller import CLIController
     import settings
-    from api.rest_server import RestServer
 
     lb.init(logging.INFO)
 
@@ -27,10 +28,6 @@ def main():
     # Start topology loop
     topology.run()
 
-    # Start REST API Server
-    rest_server = RestServer()
-    # rest_server.run()
-
     # Start CLI
     cli = CLIController(settings.app['version'])
     # cli.init()
@@ -40,7 +37,6 @@ def main():
     lb.get().pre_shutdown()
     time.sleep(0.5)
     topology.shutdown()
-    rest_server.shutdown()
     time.sleep(0.5)
     lb.get().post_shutdown()
 
@@ -48,9 +44,6 @@ def main():
 if __name__ == '__main__':
     # Fix when draw image in terminal without display
     matplotlib.use('Agg')
-    # format = '[%(levelname)s] (%(threadName)-10s) %(message)s'
-    # FORMAT = '%(asctime)-15s [%(levelname)s] (%(processName)-10s) (%(threadName)-10s): %(message)s'
-    # logging.basicConfig(level=logging.DEBUG)
 
     if os.name == 'nt':
         print("Warning: Windows is not fully support.")

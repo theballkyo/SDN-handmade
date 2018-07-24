@@ -49,7 +49,7 @@ async def get(host, community, port, oid_list, max_repetitions=16, extras=None):
             ContextData(),
             0, max_repetitions,
             *var_binds,
-            lexicographicMode=lexicographic_mode)
+                lexicographicMode=lexicographic_mode)
 
         # Received packet time
         # recv_time = time.time()

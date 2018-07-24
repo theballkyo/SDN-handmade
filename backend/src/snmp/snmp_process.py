@@ -131,12 +131,15 @@ async def process_route(device_id, host, community, port):
     for route in routes:
         ip = IPNetwork("{}/{}".format(route['dst'], route['mask']))
 
+        # /32
         if ip.size == 1:
             start_ip = ip.first
             end_ip = ip.first
+        # /31
         elif ip.size == 2:
             start_ip = ip.first
             end_ip = ip.last
+        # Other
         else:
             start_ip = ip.first + 1
             end_ip = ip.last - 1

@@ -2,11 +2,10 @@ import logging
 import socket
 import threading
 import traceback
-from time import time
 from datetime import datetime, timedelta
 
-import sdn_utils
 import repository
+import sdn_utils
 from netflow.netflow_packet import ExportPacket
 
 
@@ -65,12 +64,8 @@ class NetflowWorker(threading.Thread):
                         flows.append(flow.data)
                         flow_type = 'active'
 
-                    # logging.debug("[%s] %s <=> %s | %s %s", flow_type, flow.data['ipv4_src_addr'], flow.data['ipv4_dst_addr'],
-                    #               flow.data['last_switched'], packet_datetime)
                     # Remove flows are not active
                     # TODO
-
-                # logging.info("Flow: {}, {}".format(len(export.flows), len(flows)))
 
                 self.flow_stat_repository.update_flows(flows)
 

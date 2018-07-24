@@ -1,13 +1,13 @@
 """ SDN Handmade for legacy Cisco device """
 import argparse
-import database
-import matplotlib
-import os
 import logging
+import os
+
+import database
 
 
 def main():
-    """ Run Web server
+    """ Run RestAPI Server
     """
     import logbug as lb
     from api.rest_server import RestServer
@@ -21,10 +21,6 @@ def main():
 
 if __name__ == '__main__':
     # Fix when draw image in terminal without display
-    matplotlib.use('Agg')
-    # format = '[%(levelname)s] (%(threadName)-10s) %(message)s'
-    # FORMAT = '%(asctime)-15s [%(levelname)s] (%(processName)-10s) (%(threadName)-10s): %(message)s'
-    # logging.basicConfig(level=logging.DEBUG)
 
     if os.name == 'nt':
         print("Warning: Windows is not fully support.")
