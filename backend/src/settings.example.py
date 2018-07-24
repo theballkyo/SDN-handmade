@@ -18,6 +18,10 @@ netmiko = {
     'global_delay_factor': 1
 }
 
+snmp_worker = {
+    'pool': 4  # Can set auto or number
+}
+
 netflow = {
     'bind_ip': '127.0.0.1',
     'bind_port': 23456
